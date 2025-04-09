@@ -142,24 +142,39 @@ h1 {
 
 /* 随机按钮样式 */
 .random-button {
-  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  width: 38px;
+  height: 38px;
   background-color: #009688;
   color: white;
   font-weight: 600;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s;
-  white-space: nowrap;
+  transition: all 0.3s;
+}
+
+.random-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  stroke-width: 2;
 }
 
 .random-button:hover {
   background-color: #00796b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .random-button:disabled {
   background-color: #bdbdbd;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* 示例选择 */
