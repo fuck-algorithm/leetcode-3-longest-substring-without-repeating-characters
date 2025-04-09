@@ -16,6 +16,28 @@ const examples = [
   { label: '示例6: "dvdf"', value: 'dvdf' },
 ];
 
+// 生成随机字符串
+const generateRandomString = (minLength = 5, maxLength = 15) => {
+  const characters = 'abcdefghijklmnopqrstuvwxyz';
+  const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+  let result = '';
+  
+  for (let i = 0; i < length; i++) {
+    // 增加一些重复字符的概率，使得示例更有意义
+    if (i > 0 && Math.random() < 0.3 && result.length > 2) {
+      // 30%的概率使用已有的字符
+      const randomIndex = Math.floor(Math.random() * result.length);
+      result += result[randomIndex];
+    } else {
+      // 70%的概率使用新字符
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      result += characters[randomIndex];
+    }
+  }
+  
+  return result;
+};
+
 const InputPanel: React.FC<InputPanelProps> = ({
   onInputChange,
   onStart,
@@ -27,6 +49,13 @@ const InputPanel: React.FC<InputPanelProps> = ({
   const handleExampleSelect = (value: string) => {
     setInput(value);
     onInputChange(value);
+  };
+
+  // 处理随机字符串生成
+  const handleRandomGenerate = () => {
+    const randomString = generateRandomString();
+    setInput(randomString);
+    onInputChange(randomString);
   };
 
   // 处理输入变化
@@ -54,6 +83,15 @@ const InputPanel: React.FC<InputPanelProps> = ({
             placeholder="请输入一个字符串，例如: abcabcbb"
             disabled={disabled}
           />
+          <button 
+            type="button" 
+            className="random-button"
+            onClick={handleRandomGenerate}
+            disabled={disabled}
+            title="生成随机字符串"
+          >
+            随机
+          </button>
           <button 
             type="submit" 
             className="start-button"

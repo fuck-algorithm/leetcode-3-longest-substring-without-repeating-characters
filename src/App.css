@@ -140,6 +140,28 @@ h1 {
   cursor: not-allowed;
 }
 
+/* 随机按钮样式 */
+.random-button {
+  padding: 0.5rem 1rem;
+  background-color: #009688;
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.random-button:hover {
+  background-color: #00796b;
+}
+
+.random-button:disabled {
+  background-color: #bdbdbd;
+  cursor: not-allowed;
+}
+
 /* 示例选择 */
 .examples {
   margin-top: 0.5rem;
