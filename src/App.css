@@ -316,27 +316,47 @@ h1 {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  background-color: #fff;
-  padding: 4px 8px;
+  background-color: #f8f9fa;
+  padding: 4px 10px;
   border-radius: 4px;
-  border: 1px solid #ddd;
+  border: 1px solid #e0e0e0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   height: 28px; /* 与按钮保持一致的高度 */
+  position: relative;
 }
 
 .speed-control label {
   font-size: 0.75rem;
-  color: #555;
-  font-weight: 500;
+  color: #5c6bc0;
+  font-weight: 600;
+  margin-right: 2px;
 }
 
 .speed-control select {
-  padding: 2px 4px;
-  border: 1px solid #ddd;
+  padding: 2px 20px 2px 4px;
+  border: none;
   border-radius: 3px;
-  background-color: #fff;
-  font-size: 0.75rem;
-  height: 22px;
+  background-color: transparent;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #333;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c6bc0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+}
+
+.speed-control select:focus {
+  outline: none;
+  background-color: rgba(92, 107, 192, 0.05);
+}
+
+.speed-control select option {
+  font-size: 0.8rem;
+  padding: 8px;
 }
 
 /* 键盘提示 */
