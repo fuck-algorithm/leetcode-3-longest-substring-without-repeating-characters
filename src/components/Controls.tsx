@@ -11,6 +11,8 @@ interface ControlsProps {
   canGoForward: boolean;
   playbackSpeed: number;
   onSpeedChange: (speed: number) => void;
+  currentStep: number;
+  totalSteps: number;
 }
 
 const Controls: React.FC<ControlsProps> = ({
@@ -23,8 +25,13 @@ const Controls: React.FC<ControlsProps> = ({
   canGoBack,
   canGoForward,
   playbackSpeed,
-  onSpeedChange
+  onSpeedChange,
+  currentStep = 0,
+  totalSteps = 1
 }) => {
+  // 计算进度百分比
+  const progressPercentage = Math.round((currentStep / (totalSteps - 1)) * 100) || 0;
+  
   return (
     <>
       <div className="controls">
@@ -87,6 +94,19 @@ const Controls: React.FC<ControlsProps> = ({
               <line x1="19" y1="5" x2="19" y2="19"></line>
             </svg>
           </button>
+        </div>
+
+        <div className="progress-container">
+          <div className="progress-bar">
+            <div 
+              className="progress-fill"
+              style={{ width: `${progressPercentage}%` }}
+              title={`${progressPercentage}%`}
+            ></div>
+          </div>
+          <div className="progress-text">
+            步骤 {currentStep + 1}/{totalSteps}
+          </div>
         </div>
 
         <div className="speed-control">

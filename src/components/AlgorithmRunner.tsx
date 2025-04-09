@@ -23,6 +23,8 @@ const AlgorithmRunner: React.FC<AlgorithmRunnerProps> = ({
   const {
     inputString,
     currentState,
+    stateHistory,
+    currentStateIndex,
     isPlaying,
     playbackSpeed,
     isRunning,
@@ -113,6 +115,8 @@ const AlgorithmRunner: React.FC<AlgorithmRunnerProps> = ({
             canGoForward={canGoForward}
             playbackSpeed={playbackSpeed}
             onSpeedChange={handleSpeedChange}
+            currentStep={currentStateIndex}
+            totalSteps={stateHistory.length}
           />
         </>
       )}
