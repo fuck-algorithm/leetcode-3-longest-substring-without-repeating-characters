@@ -16,6 +16,7 @@ interface ControlsProps {
   onSpeedChange: (speed: number) => void;
   currentStep: number;
   totalSteps: number;
+  hideProgressBar?: boolean;
 }
 
 /**
@@ -34,7 +35,8 @@ const Controls: React.FC<ControlsProps> = ({
   playbackSpeed,
   onSpeedChange,
   currentStep = 0,
-  totalSteps = 1
+  totalSteps = 1,
+  hideProgressBar = false
 }) => {
   // 计算进度百分比
   const progressPercentage = Math.round((currentStep / (totalSteps - 1)) * 100) || 0;
@@ -112,19 +114,21 @@ const Controls: React.FC<ControlsProps> = ({
           </ControlButton>
         </div>
 
-        {/* 进度条 */}
-        <div className="progress-container">
-          <div className="progress-bar">
-            <div 
-              className="progress-fill"
-              style={{ width: `${progressPercentage}%` }}
-              title={`${progressPercentage}%`}
-            ></div>
+        {/* 进度条 - 仅在不隐藏时显示 */}
+        {!hideProgressBar && (
+          <div className="progress-container">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ width: `${progressPercentage}%` }}
+                title={`${progressPercentage}%`}
+              ></div>
+            </div>
+            <div className="progress-text">
+              步骤 {currentStep + 1}/{totalSteps}
+            </div>
           </div>
-          <div className="progress-text">
-            步骤 {currentStep + 1}/{totalSteps}
-          </div>
-        </div>
+        )}
 
         {/* 速度控制 */}
         <SpeedControl 

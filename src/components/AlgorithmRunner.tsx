@@ -43,6 +43,9 @@ const AlgorithmRunner: React.FC<AlgorithmRunnerProps> = ({
     setIsPlaying
   } = useAlgorithmState();
 
+  // 计算进度百分比
+  const progressPercentage = Math.round((currentStateIndex / (stateHistory.length - 1)) * 100) || 0;
+
   // 使用播放控制钩子
   usePlaybackControls({
     isPlaying,
@@ -104,6 +107,20 @@ const AlgorithmRunner: React.FC<AlgorithmRunnerProps> = ({
             />
           </div>
 
+          {/* 全屏宽度进度条 */}
+          <div className="fullwidth-progress-container">
+            <div className="fullwidth-progress-bar">
+              <div 
+                className="fullwidth-progress-fill"
+                style={{ width: `${progressPercentage}%` }}
+                title={`${progressPercentage}%`}
+              ></div>
+            </div>
+            <div className="fullwidth-progress-text">
+              步骤 {currentStateIndex + 1}/{stateHistory.length}
+            </div>
+          </div>
+
           <Controls
             onPrev={stepBackward}
             onNext={stepForward}
@@ -117,6 +134,7 @@ const AlgorithmRunner: React.FC<AlgorithmRunnerProps> = ({
             onSpeedChange={handleSpeedChange}
             currentStep={currentStateIndex}
             totalSteps={stateHistory.length}
+            hideProgressBar={true}
           />
         </>
       )}

@@ -449,3 +449,47 @@ h1 {
     display: none;
   }
 }
+
+/* 全屏宽度进度条 */
+.fullwidth-progress-container {
+  width: 100%;
+  position: relative;
+  margin-bottom: 0.5rem;
+  padding: 0;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.fullwidth-progress-bar {
+  width: 100%;
+  height: 10px;
+  background-color: #f0f0f0;
+  overflow: hidden;
+  position: relative;
+}
+
+.fullwidth-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4fc3f7 0%, #5c6bc0 100%);
+  transition: width 0.3s ease;
+}
+
+.fullwidth-progress-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #5c6bc0;
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* 媒体查询样式 */
+@media (max-width: 768px) {
+  .fullwidth-progress-container {
+    margin-bottom: 0.3rem;
+  }
+  
+  .fullwidth-progress-bar {
+    height: 6px;
+  }
+}
