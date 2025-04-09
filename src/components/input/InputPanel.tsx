@@ -90,14 +90,7 @@ const InputPanel: React.FC<InputPanelProps> = ({
             disabled={disabled}
             title="生成随机字符串"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="2" width="20" height="20" rx="3" ry="3"></rect>
-              <circle cx="8" cy="8" r="2"></circle>
-              <circle cx="16" cy="8" r="2"></circle>
-              <circle cx="8" cy="16" r="2"></circle>
-              <circle cx="16" cy="16" r="2"></circle>
-              <circle cx="12" cy="12" r="2"></circle>
-            </svg>
+            🎲
           </button>
           <button 
             type="submit" 
