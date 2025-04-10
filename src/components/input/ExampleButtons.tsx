@@ -7,7 +7,8 @@ export const examples = [
   { label: '示例3: "pwwkew"', value: 'pwwkew' },
   { label: '示例4: "abcdefgh"', value: 'abcdefgh' },
   { label: '示例5: "aab"', value: 'aab' },
-  { label: '示例6: "dvdf"', value: 'dvdf' },
+  { label: '示例6: "abcdefghijk"', value: 'abcdefghijk' },
+  { label: '示例7: "zyxwvutsrqp"', value: 'zyxwvutsrqp' },
 ];
 
 interface ExampleButtonsProps {
@@ -34,7 +35,7 @@ const ExampleButtons: React.FC<ExampleButtonsProps> = ({ onSelect, disabled }) =
             disabled={disabled}
             title={example.label}
           >
-            {example.label}
+            {`示例${index + 1}: "${example.value}"`}
           </button>
         ))}
       </div>

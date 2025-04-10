@@ -13,7 +13,8 @@ interface InputPanelProps {
  * @param maxLength 最大长度
  * @returns 随机生成的字符串
  */
-const generateRandomString = (minLength = 5, maxLength = 15) => {
+const generateRandomString = (minLength = 3, maxLength = 50) => {
+  // 只包含小写字母
   const characters = 'abcdefghijklmnopqrstuvwxyz';
   const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
   let result = '';
@@ -43,31 +44,92 @@ const InputPanel: React.FC<InputPanelProps> = ({
   onStart,
   disabled
 }) => {
-  const [input, setInput] = useState<string>('abcabcbb');
+  // 使用随机字符串作为初始值，而不是固定字符串
+  const [input, setInput] = useState<string>(() => generateRandomString());
+  const [error, setError] = useState<string>('');
+
+  // 验证字符串是否符合要求
+  const validateInput = (value: string): boolean => {
+    if (!value.trim()) {
+      setError('输入不能为空！');
+      return false;
+    }
+    
+    if (value.length > 50) {
+      setError('字符串长度不能超过50个字符！');
+      return false;
+    }
+    
+    if (!/^[a-z]+$/.test(value)) {
+      setError('字符串只能包含小写字母！');
+      return false;
+    }
+    
+    setError('');
+    return true;
+  };
+
+  // 组件挂载后通知父组件初始值，并开始演示
+  React.useEffect(() => {
+    if (validateInput(input)) {
+      onInputChange(input);
+      // 使用setTimeout确保状态更新后再开始算法
+      setTimeout(() => {
+        onStart();
+      }, 10);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 仅在组件挂载时执行一次
 
   // 处理示例选择
   const handleExampleSelect = (value: string) => {
     setInput(value);
-    onInputChange(value);
+    
+    if (validateInput(value)) {
+      // 使用Promise和setTimeout确保状态更新顺序正确
+      // 先触发重置
+      onInputChange(value);
+      
+      // 然后延迟启动算法，确保重置完成
+      setTimeout(() => {
+        console.log('示例切换：开始算法', value);
+        onStart();
+      }, 100); // 使用更长的延迟确保状态完全更新
+    }
   };
 
   // 处理随机字符串生成
   const handleRandomGenerate = () => {
     const randomString = generateRandomString();
     setInput(randomString);
+    setError(''); // 随机生成的字符串一定是有效的
+
+    // 先重置算法状态
     onInputChange(randomString);
+    
+    // 延迟启动算法，确保状态完全重置
+    setTimeout(() => {
+      console.log('随机字符串：开始算法', randomString);
+      onStart();
+    }, 100); // 使用更长的延迟确保状态完全更新
   };
 
   // 处理输入变化
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
+    const value = e.target.value;
+    setInput(value);
+    // 实时验证但不显示错误，提交时再显示
+    if (error) validateInput(value);
   };
 
   // 提交输入
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onInputChange(input);
-    onStart();
+    
+    if (validateInput(input)) {
+      onInputChange(input);
+      onStart();
+    }
   };
 
   return (
@@ -80,31 +142,33 @@ const InputPanel: React.FC<InputPanelProps> = ({
             type="text"
             value={input}
             onChange={handleInputChange}
-            placeholder="请输入一个字符串，例如: abcabcbb"
-            disabled={disabled}
+            placeholder="请输入1-50个小写字母"
+            disabled={false}
+            className={error ? 'input-error' : ''}
           />
           <button 
             type="button" 
             className="random-button"
             onClick={handleRandomGenerate}
-            disabled={disabled}
-            title="生成随机字符串"
+            disabled={false}
+            title="生成1-50个随机字母"
           >
             🎲
           </button>
           <button 
             type="submit" 
             className="start-button"
-            disabled={!input.trim() || disabled}
+            disabled={!input.trim()}
           >
-            开始演示
+            确定
           </button>
         </div>
+        {error && <div className="error-message">{error}</div>}
       </form>
 
       <ExampleButtons 
         onSelect={handleExampleSelect} 
-        disabled={disabled} 
+        disabled={false}
       />
     </div>
   );

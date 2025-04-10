@@ -127,8 +127,17 @@ export const createWindowIndicator = (
 /**
  * 计算合适的字符尺寸
  */
-export function calculateCharDimensions(inputLength: number, minSize: number = 20, maxSize: number = 35) {
-  return Math.min(maxSize, Math.max(minSize, 600 / Math.max(inputLength, 1)));
+export function calculateCharDimensions(inputLength: number, minSize: number = 20, maxSize: number = 50) {
+  // 根据输入字符的长度计算合适的字符尺寸
+  // 计算逻辑：尝试让字符占满可用宽度的80%，同时设置上下限
+  const availableWidth = window.innerWidth * 0.85; // 使用屏幕宽度的85%作为参考
+  const spacing = 10; // 字符间距
+  
+  // 计算每个字符的理想宽度 = (可用宽度 - 字符间距) / 字符数量
+  const idealSize = (availableWidth - (inputLength - 1) * spacing) / inputLength;
+  
+  // 确保字符尺寸在合理范围内
+  return Math.min(maxSize, Math.max(minSize, idealSize));
 }
 
 /**

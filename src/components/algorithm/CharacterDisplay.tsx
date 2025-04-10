@@ -27,17 +27,26 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
   React.useEffect(() => {
     if (!svg) return;
     
+    // 字符间距
+    const spacing = 10;
+    
     // 绘制字符串背景
     svg.selectAll('.char-background').remove();
     svg.append('rect')
       .attr('class', 'char-background')
-      .attr('x', startX - charWidth/2)
+      .attr('x', startX - spacing/2)
       .attr('y', startY - charHeight/2)
-      .attr('width', inputString.length * charWidth + charWidth)
+      .attr('width', inputString.length * (charWidth + spacing) - spacing + spacing)
       .attr('height', charHeight + 10)
       .attr('rx', 8)
       .attr('fill', '#f0f0f0')
       .attr('opacity', 0.5);
+    
+    // 安全获取指针位置
+    const leftPointer = Math.max(0, Math.min(currentState.leftPointer || 0, inputString.length - 1));
+    const rightPointer = Math.max(leftPointer, Math.min(currentState.rightPointer || 0, inputString.length - 1));
+    const duplicateFound = currentState.duplicateFound || false;
+    const duplicateChar = currentState.duplicateChar || '';
     
     // 绘制字符
     const charGroup = svg.selectAll('.char-group')
@@ -47,38 +56,43 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
         enter => {
           const g = enter.append('g')
             .attr('class', 'char-group')
-            .attr('transform', (d, i) => `translate(${startX + i * charWidth}, ${startY})`)
+            .attr('transform', (d, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`)
             .style('opacity', 0);
             
           g.append('rect')
-            .attr('width', charWidth - 4)
+            .attr('width', charWidth)
             .attr('height', charHeight)
             .attr('rx', 5)
             .attr('ry', 5)
             .attr('fill', (d, i) => {
-              if (i >= currentState.leftPointer && i <= currentState.rightPointer) {
+              if (i >= leftPointer && i <= rightPointer) {
                 return '#e0f7fa';
               }
               return '#f5f5f5';
             })
             .attr('stroke', (d, i) => {
-              if (currentState.duplicateFound && d === currentState.duplicateChar) {
+              if (duplicateFound && d === duplicateChar) {
                 return '#f44336';
               }
               return '#ccc';
             })
             .attr('stroke-width', (d, i) => {
-              if (currentState.duplicateFound && d === currentState.duplicateChar) {
+              if (duplicateFound && d === duplicateChar) {
                 return 3;
               }
               return 1;
             });
             
+          // 根据字符大小动态计算字体大小
+          const fontSize = Math.max(16, Math.min(charWidth * 0.5, 36));
+            
           g.append('text')
-            .attr('x', charWidth / 2 - 2)
-            .attr('y', charHeight / 2 + 5)
+            .attr('x', charWidth / 2)
+            .attr('y', charHeight / 2 + fontSize/3)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '18px')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'bold')
+            .attr('font-family', 'monospace')
             .attr('fill', '#333')
             .text(d => d);
             
@@ -86,27 +100,40 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
         },
         // 更新现有字符
         update => {
+          update.transition()
+            .duration(400)
+            .attr('transform', (d, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`);
+            
           update.select('rect')
             .transition()
             .duration(400)
+            .attr('width', charWidth)
+            .attr('height', charHeight)
             .attr('fill', (d, i) => {
-              if (i >= currentState.leftPointer && i <= currentState.rightPointer) {
+              if (i >= leftPointer && i <= rightPointer) {
                 return '#e0f7fa';
               }
               return '#f5f5f5';
             })
             .attr('stroke', (d, i) => {
-              if (currentState.duplicateFound && d === currentState.duplicateChar) {
+              if (duplicateFound && d === duplicateChar) {
                 return '#f44336';
               }
               return '#ccc';
             })
             .attr('stroke-width', (d, i) => {
-              if (currentState.duplicateFound && d === currentState.duplicateChar) {
+              if (duplicateFound && d === duplicateChar) {
                 return 3;
               }
               return 1;
             });
+          
+          // 更新字体大小
+          const fontSize = Math.max(16, Math.min(charWidth * 0.5, 36));
+          update.select('text')
+            .attr('x', charWidth / 2)
+            .attr('y', charHeight / 2 + fontSize/3)
+            .attr('font-size', `${fontSize}px`);
           
           return update;
         }
@@ -118,11 +145,11 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
     
     // 绘制当前窗口指示器
     svg.selectAll('.window-indicator').remove();
-    if (currentState.leftPointer <= currentState.rightPointer) {
-      const windowWidth = (currentState.rightPointer - currentState.leftPointer + 1) * charWidth;
+    if (leftPointer <= rightPointer) {
+      const windowWidth = (rightPointer - leftPointer + 1) * (charWidth + spacing) - spacing;
       svg.append('rect')
         .attr('class', 'window-indicator')
-        .attr('x', startX + currentState.leftPointer * charWidth - 2)
+        .attr('x', startX + leftPointer * (charWidth + spacing))
         .attr('y', startY + charHeight + 5)
         .attr('width', windowWidth)
         .attr('height', 3)

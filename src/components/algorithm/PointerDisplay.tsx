@@ -29,18 +29,27 @@ const PointerDisplay: React.FC<PointerDisplayProps> = ({
   React.useEffect(() => {
     if (!svg) return;
     
+    // 安全获取有效的指针位置
+    const validCurrentPos = Math.max(0, currentPos);
+    const validPreviousPos = Math.max(0, previousPos);
+    
+    // 移除先前的指针元素
+    svg.selectAll(`.${pointerType}-pointer`).remove();
+    
     // 设置指针基本属性
     const className = `${pointerType}-pointer`;
     const color = pointerType === 'left' ? '#4caf50' : '#2196f3';
     const label = pointerType === 'left' ? '左' : '右';
+    const spacing = 10; // 字符间距
     
-    // 清除现有指针
-    svg.selectAll(`.${className}`).remove();
+    // 计算指针位置，考虑字符间距
+    const getPointerX = (pos: number) => startX + pos * (charWidth + spacing) + charWidth / 2;
+    const y = pointerType === 'left' ? startY - 40 : startY - 20;
     
     // 创建指针组
     const pointer = svg.append('g')
       .attr('class', className)
-      .attr('transform', `translate(${startX + previousPos * charWidth + charWidth / 2}, ${startY - 20})`)
+      .attr('transform', `translate(${getPointerX(validPreviousPos)}, ${y})`)
       .style('opacity', 0);
     
     // 添加指针箭头
@@ -52,7 +61,8 @@ const PointerDisplay: React.FC<PointerDisplayProps> = ({
     pointer.append('text')
       .attr('text-anchor', 'middle')
       .attr('y', -5)
-      .attr('font-size', '10px')
+      .attr('font-size', '12px')
+      .attr('font-weight', 'bold')
       .text(label);
     
     // 指针动画效果：淡入 + 移动
@@ -62,7 +72,7 @@ const PointerDisplay: React.FC<PointerDisplayProps> = ({
       .style('opacity', 1)
       .transition()
       .duration(400)
-      .attr('transform', `translate(${startX + currentPos * charWidth + charWidth / 2}, ${startY - 20})`)
+      .attr('transform', `translate(${getPointerX(validCurrentPos)}, ${y})`)
       .on('end', () => {
         // 对应步骤时添加额外的动画效果
         const isRelevantStep = 
@@ -73,10 +83,10 @@ const PointerDisplay: React.FC<PointerDisplayProps> = ({
           pointer
             .transition()
             .duration(300)
-            .attr('transform', `translate(${startX + currentPos * charWidth + charWidth / 2}, ${startY - 25})`)
+            .attr('transform', `translate(${getPointerX(validCurrentPos)}, ${y - 5})`)
             .transition()
             .duration(300)
-            .attr('transform', `translate(${startX + currentPos * charWidth + charWidth / 2}, ${startY - 20})`);
+            .attr('transform', `translate(${getPointerX(validCurrentPos)}, ${y})`);
         }
       });
   }, [svg, pointerType, currentPos, previousPos, startX, startY, charWidth, step]);
