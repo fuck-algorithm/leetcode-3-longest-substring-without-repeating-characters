@@ -1,11 +1,6 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import * as d3 from 'd3';
 import { AlgorithmState, AlgorithmStep } from './types';
-import CharacterDisplay from './CharacterDisplay';
-import PointerDisplay from './PointerDisplay';
-import HashSetDisplay from './HashSetDisplay';
-import AnswerDisplay from './AnswerDisplay';
-import StepInfo from './StepInfo';
 
 interface AlgorithmVisualizationProps {
   inputString: string;
@@ -328,7 +323,7 @@ function renderCharacterDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, 
     .attr('font-weight', 'bold')
     .attr('font-family', 'monospace')
     .attr('fill', '#333')
-    .text(d => String(d));
+    .text(char => String(char));
     
   // 添加淡入动画
   charGroup.transition()

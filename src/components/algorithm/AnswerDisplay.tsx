@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import * as d3 from 'd3';
 import { AlgorithmState } from './types';
-import { calculateCharDimensions } from './drawingUtils';
 
 interface AnswerDisplayProps {
   svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;

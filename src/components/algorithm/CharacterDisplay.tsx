@@ -49,14 +49,14 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
     const duplicateChar = currentState.duplicateChar || '';
     
     // 绘制字符
-    const charGroup = svg.selectAll('.char-group')
+    svg.selectAll('.char-group')
       .data(inputString.split(''))
       .join(
         // 添加新字符
         enter => {
           const g = enter.append('g')
             .attr('class', 'char-group')
-            .attr('transform', (d, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`)
+            .attr('transform', (_, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`)
             .style('opacity', 0);
             
           g.append('rect')
@@ -64,19 +64,19 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
             .attr('height', charHeight)
             .attr('rx', 5)
             .attr('ry', 5)
-            .attr('fill', (d, i) => {
+            .attr('fill', (_, i) => {
               if (i >= leftPointer && i <= rightPointer) {
                 return '#e0f7fa';
               }
               return '#f5f5f5';
             })
-            .attr('stroke', (d, i) => {
+            .attr('stroke', (d) => {
               if (duplicateFound && d === duplicateChar) {
                 return '#f44336';
               }
               return '#ccc';
             })
-            .attr('stroke-width', (d, i) => {
+            .attr('stroke-width', (d) => {
               if (duplicateFound && d === duplicateChar) {
                 return 3;
               }
@@ -102,26 +102,26 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
         update => {
           update.transition()
             .duration(400)
-            .attr('transform', (d, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`);
+            .attr('transform', (_, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`);
             
           update.select('rect')
             .transition()
             .duration(400)
             .attr('width', charWidth)
             .attr('height', charHeight)
-            .attr('fill', (d, i) => {
+            .attr('fill', (_, i) => {
               if (i >= leftPointer && i <= rightPointer) {
                 return '#e0f7fa';
               }
               return '#f5f5f5';
             })
-            .attr('stroke', (d, i) => {
+            .attr('stroke', (d) => {
               if (duplicateFound && d === duplicateChar) {
                 return '#f44336';
               }
               return '#ccc';
             })
-            .attr('stroke-width', (d, i) => {
+            .attr('stroke-width', (d) => {
               if (duplicateFound && d === duplicateChar) {
                 return 3;
               }
@@ -139,7 +139,7 @@ const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
         }
       )
       .transition()
-      .delay((d, i) => i * 50) // 连续展现动画效果
+      .delay((_, i) => i * 50) // 连续展现动画效果
       .duration(300)
       .style('opacity', 1);
     
