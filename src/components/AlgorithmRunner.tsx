@@ -8,7 +8,6 @@ import { usePlaybackControls } from './hooks/usePlaybackControls';
 
 interface AlgorithmRunnerProps {
   width?: number;
-  height?: number;
 }
 
 /**
@@ -16,8 +15,7 @@ interface AlgorithmRunnerProps {
  * 协调算法的输入、执行、控制和可视化
  */
 const AlgorithmRunner: React.FC<AlgorithmRunnerProps> = ({
-  width = 800,
-  height = 600
+  width = 800
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [visualizationHeight, setVisualizationHeight] = useState(500);
