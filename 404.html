@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>单页应用重定向</title>
+  <script type="text/javascript">
+    // GitHub Pages单页应用路由问题解决方案
+    // 使用会话存储暂存下来，然后将用户重定向到首页
+    const segmentCount = 1; // 根据仓库名称调整，这里是一级目录
+    
+    const location = window.location;
+    const redirect = sessionStorage.redirect;
+    delete sessionStorage.redirect;
+    
+    // 如果存在重定向的URL，我们需要重新导航
+    if (redirect && redirect !== location.href) {
+      history.replaceState(null, null, redirect);
+    }
+  </script>
+</head>
+<body>
+  <p>重定向中...</p>
+  <script>
+    // 如果没有进行重定向，那么重定向到首页
+    window.location.href = '/leetcode-3-longest-substring-without-repeating-characters/';
+  </script>
+</body>
+</html> 
