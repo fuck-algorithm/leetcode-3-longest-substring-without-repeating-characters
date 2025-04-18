@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import * as d3 from 'd3';
 import { AlgorithmState, AlgorithmStep } from './types';
 import CharacterDisplay from './CharacterDisplay';
@@ -26,8 +26,7 @@ const AlgorithmVisualization: React.FC<AlgorithmVisualizationProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevState = useRef<AlgorithmState | null>(null);
-  const [isAnimating, setIsAnimating] = useState<boolean>(false);
-  
+
   // 计算字符宽度和高度
   const charWidth = Math.min(Math.max(20, (width * 0.8) / Math.max(1, inputString?.length || 1)), 50) * 1.2;
   const charHeight = charWidth;
@@ -140,18 +139,6 @@ const AlgorithmVisualization: React.FC<AlgorithmVisualizationProps> = ({
       maxLength: maxSubstring.length // 始终使用字符串长度作为maxLength
     };
   }, [currentState, inputString, currentState?.leftPointer, currentState?.rightPointer, currentState?.maxSubstring, currentState?.maxLength]);
-
-  // 处理动画状态
-  useEffect(() => {
-    if (prevState.current !== currentState) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setIsAnimating(false);
-      }, 500);
-      prevState.current = currentState;
-      return () => clearTimeout(timer);
-    }
-  }, [currentState]);
 
   // 主要的渲染逻辑 - 每当输入或状态变化时更新SVG
   useEffect(() => {
@@ -310,19 +297,19 @@ function renderCharacterDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, 
     .attr('height', charHeight)
     .attr('rx', 5)
     .attr('ry', 5)
-    .attr('fill', (d, i) => {
+    .attr('fill', (_d, i) => {
       if (i >= leftPointer && i <= rightPointer) {
         return '#e0f7fa';
       }
       return '#f5f5f5';
     })
-    .attr('stroke', (d, i) => {
+    .attr('stroke', d => {
       if (duplicateFound && d === duplicateChar) {
         return '#f44336';
       }
       return '#ccc';
     })
-    .attr('stroke-width', (d, i) => {
+    .attr('stroke-width', d => {
       if (duplicateFound && d === duplicateChar) {
         return 3;
       }
@@ -345,7 +332,7 @@ function renderCharacterDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, 
     
   // 添加淡入动画
   charGroup.transition()
-    .delay((d, i) => i * 50) // 连续展现动画效果
+    .delay((_, i) => i * 50) // 连续展现动画效果
     .duration(300)
     .style('opacity', 1);
     
