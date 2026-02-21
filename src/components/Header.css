@@ -1,0 +1,173 @@
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 100;
+}
+
+.header-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.back-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.back-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: translateX(-2px);
+}
+
+.back-link svg {
+  flex-shrink: 0;
+}
+
+.header-center {
+  flex: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.title-link {
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.3s ease;
+}
+
+.title-link:hover {
+  opacity: 0.85;
+  text-decoration: underline;
+}
+
+.subtitle {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 400;
+}
+
+.header-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.idea-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.idea-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.idea-button svg {
+  flex-shrink: 0;
+}
+
+.github-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.github-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.star-count {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    padding: 10px 15px;
+  }
+  
+  .header-left {
+    flex: 0 0 auto;
+  }
+  
+  .back-link span {
+    display: none;
+  }
+  
+  .header-center {
+    flex: 1 1 100%;
+    order: -1;
+    margin-bottom: 8px;
+  }
+  
+  .main-title {
+    font-size: 16px;
+  }
+  
+  .subtitle {
+    font-size: 11px;
+  }
+  
+  .header-right {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+  
+  .idea-button span,
+  .github-link svg + span {
+    display: none;
+  }
+}

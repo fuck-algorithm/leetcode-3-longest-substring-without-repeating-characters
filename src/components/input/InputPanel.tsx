@@ -41,8 +41,7 @@ const generateRandomString = (minLength = 3, maxLength = 50) => {
  */
 const InputPanel: React.FC<InputPanelProps> = ({
   onInputChange,
-  onStart,
-  disabled
+  onStart
 }) => {
   // 使用随机字符串作为初始值，而不是固定字符串
   const [input, setInput] = useState<string>(() => generateRandomString());

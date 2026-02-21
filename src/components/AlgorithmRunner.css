@@ -1,0 +1,87 @@
+.algorithm-runner {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fa;
+}
+
+/* 输入区域 */
+.input-section {
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+/* 主内容区 - 左右分栏 */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 16px;
+  padding: 16px;
+}
+
+/* 画布区域 - 左侧，占据大部分空间 */
+.canvas-section {
+  flex: 2;
+  min-width: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 代码区域 - 右侧 */
+.code-section {
+  flex: 1;
+  min-width: 320px;
+  max-width: 500px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 底部控制区 */
+.bottom-controls {
+  background: white;
+  border-top: 1px solid #e1e4e8;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 响应式布局 */
+@media (max-width: 1024px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .code-section {
+    max-width: none;
+    min-height: 300px;
+  }
+  
+  .canvas-section {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .input-section {
+    padding: 10px 12px;
+  }
+  
+  .main-content {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .bottom-controls {
+    padding: 10px 12px;
+  }
+}

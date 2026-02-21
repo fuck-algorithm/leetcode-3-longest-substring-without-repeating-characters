@@ -38,7 +38,7 @@ const HashSetDisplay: React.FC<HashSetDisplayProps> = ({ svg, currentState, widt
     console.log(`[${componentId.current}] 右指针: ${rightPointer}`);
     
     // 只考虑leftPointer到rightPointer之间的字符
-    let windowChars = [];
+    const windowChars = [];
     if (leftPointer <= rightPointer && rightPointer < inputString.length) {
       for (let i = leftPointer; i <= rightPointer; i++) {
         windowChars.push(inputString[i]);

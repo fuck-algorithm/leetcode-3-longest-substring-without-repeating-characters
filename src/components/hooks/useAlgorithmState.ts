@@ -223,6 +223,15 @@ export function useAlgorithmState() {
     setPlaybackSpeed(speed);
   }, []);
 
+  // 跳转到指定步骤
+  const goToStep = useCallback((step: number) => {
+    if (step >= 0 && step < stateHistory.length) {
+      setCurrentStateIndex(step);
+      return true;
+    }
+    return false;
+  }, [stateHistory.length]);
+
   // 在返回之前确保currentState的数据完整性
   if (currentState) {
     // 确保charSet是Set类型
@@ -263,6 +272,7 @@ export function useAlgorithmState() {
     togglePlayPause,
     handleInputChange,
     handleSpeedChange,
-    setIsPlaying
+    setIsPlaying,
+    goToStep
   };
 } 
