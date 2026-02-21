@@ -8,15 +8,19 @@
   box-sizing: border-box;
 }
 
-/* 输入区域 */
+/* 输入区域 - 固定高度 */
 .input-section {
   padding: 8px 16px;
   background: white;
   border-bottom: 1px solid #e1e4e8;
   flex-shrink: 0;
+  height: 60px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
 }
 
-/* 主内容区 - 左右分栏 */
+/* 主内容区 - 左右分栏，固定高度 */
 .main-content {
   display: flex;
   flex: 1;
@@ -37,9 +41,10 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   position: relative;
+  height: 100%;
 }
 
-/* 代码区域 - 右侧 */
+/* 代码区域 - 右侧，固定宽度 */
 .code-section {
   width: 340px;
   flex-shrink: 0;
@@ -49,9 +54,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
-/* 底部控制区 */
+/* 底部控制区 - 固定高度 */
 .bottom-controls {
   background: white;
   border-top: 1px solid #e1e4e8;
@@ -60,6 +66,8 @@
   flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
+  height: 110px;
+  box-sizing: border-box;
 }
 
 /* 响应式布局 */
