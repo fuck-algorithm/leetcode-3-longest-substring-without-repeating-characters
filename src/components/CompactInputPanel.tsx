@@ -96,68 +96,55 @@ const CompactInputPanel: React.FC<CompactInputPanelProps> = ({
   }, [input, onInputChange, onStart]);
 
   return (
-    <div className="compact-input-panel">
-      <form onSubmit={handleSubmit} className="input-row">
-        {/* 输入框 */}
-        <div className="input-group">
-          <label htmlFor="string-input">输入:</label>
-          <input
-            id="string-input"
-            type="text"
-            value={input}
-            onChange={handleInputChange}
-            placeholder="输入小写字母字符串"
+    <form onSubmit={handleSubmit} className="compact-input-panel">
+      <span className="input-label">输入:</span>
+      <input
+        type="text"
+        value={input}
+        onChange={handleInputChange}
+        placeholder="输入小写字母字符串"
+        disabled={disabled}
+        className={`input-field ${error ? 'error' : ''}`}
+      />
+      {error && <span className="error-msg">{error}</span>}
+
+      <div className="divider" />
+
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={handleRandomGenerate}
+        disabled={disabled}
+        title="随机生成"
+      >
+        🎲
+      </button>
+
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={disabled || !input.trim()}
+      >
+        ▶ 开始
+      </button>
+
+      <div className="divider" />
+
+      <span className="examples-label">示例:</span>
+      <div className="example-chips">
+        {examples.map((example, index) => (
+          <button
+            key={index}
+            className={`chip ${input === example.value ? 'active' : ''}`}
+            onClick={() => handleExampleSelect(example.value)}
             disabled={disabled}
-            className={error ? 'error' : ''}
-          />
-          {error && <span className="error-tooltip">{error}</span>}
-        </div>
-
-        {/* 随机生成按钮 */}
-        <button
-          type="button"
-          className="icon-button random-button"
-          onClick={handleRandomGenerate}
-          disabled={disabled}
-          title="随机生成"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
-          </svg>
-          <span>随机</span>
-        </button>
-
-        {/* 开始按钮 */}
-        <button
-          type="submit"
-          className="icon-button start-button"
-          disabled={disabled || !input.trim()}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="5 3 19 12 5 21 5 3"/>
-          </svg>
-          <span>开始</span>
-        </button>
-      </form>
-
-      {/* 示例选择 - 单行平铺 */}
-      <div className="examples-row">
-        <span className="examples-label">示例:</span>
-        <div className="example-chips">
-          {examples.map((example, index) => (
-            <button
-              key={index}
-              className={`example-chip ${input === example.value ? 'active' : ''}`}
-              onClick={() => handleExampleSelect(example.value)}
-              disabled={disabled}
-              type="button"
-            >
-              {example.label}
-            </button>
-          ))}
-        </div>
+            type="button"
+          >
+            {example.label}
+          </button>
+        ))}
       </div>
-    </div>
+    </form>
   );
 };
 

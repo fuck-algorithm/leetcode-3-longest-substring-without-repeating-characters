@@ -1,118 +1,114 @@
+/* 48px单行布局输入面板 */
 .compact-input-panel {
-  background: white;
-  border-radius: 8px;
-  padding: 12px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e1e4e8;
-}
-
-.input-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: nowrap;
+  height: 48px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.input-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  position: relative;
-}
-
-.input-group label {
+.input-label {
   font-size: 14px;
-  color: #586069;
+  color: #595959;
   font-weight: 500;
   white-space: nowrap;
 }
 
-.input-group input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d1d5da;
+.input-field {
+  width: 140px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
   font-size: 14px;
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  transition: all 0.2s ease;
-  min-width: 150px;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
 
-.input-group input:focus {
+.input-field:focus {
   outline: none;
-  border-color: #2a5298;
-  box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.15);
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15);
 }
 
-.input-group input.error {
-  border-color: #d73a49;
-  background: #fff5f5;
+.input-field.error {
+  border-color: #ff4d4f;
+  background: #fff2f0;
 }
 
-.error-tooltip {
+.error-msg {
   position: absolute;
-  bottom: -22px;
-  left: 40px;
+  top: 50px;
+  left: 60px;
   font-size: 12px;
-  color: #d73a49;
+  color: #ff4d4f;
   white-space: nowrap;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.icon-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
+/* 分隔线 */
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #d9d9d9;
+  margin: 0 4px;
+}
+
+/* 按钮样式 */
+.btn {
+  height: 32px;
+  padding: 0 12px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   white-space: nowrap;
 }
 
-.icon-button:disabled {
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.random-button {
-  background: #f6f8fa;
-  color: #586069;
-  border: 1px solid #d1d5da;
-}
-
-.random-button:hover:not(:disabled) {
-  background: #e1e4e8;
-  border-color: #c6cbd1;
-}
-
-.start-button {
-  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+.btn-primary {
+  background: #1890ff;
   color: white;
+  border-color: #1890ff;
 }
 
-.start-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+.btn-primary:hover:not(:disabled) {
+  background: #40a9ff;
+  border-color: #40a9ff;
 }
 
-.examples-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #e1e4e8;
-  flex-wrap: wrap;
+.btn-secondary {
+  background: white;
+  color: #595959;
+  border-color: #d9d9d9;
+  padding: 0 10px;
+  font-size: 14px;
 }
 
+.btn-secondary:hover:not(:disabled) {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+/* 示例区域 */
 .examples-label {
   font-size: 13px;
-  color: #6a737d;
+  color: #8c8c8c;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -120,62 +116,68 @@
 .example-chips {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
 }
 
-.example-chip {
-  padding: 4px 10px;
-  border: 1px solid #d1d5da;
+.chip {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   background: white;
   font-size: 12px;
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  color: #24292e;
+  color: #595959;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.example-chip:hover:not(:disabled) {
-  background: #f6f8fa;
-  border-color: #2a5298;
-  color: #2a5298;
+.chip:hover:not(:disabled) {
+  border-color: #1890ff;
+  color: #1890ff;
 }
 
-.example-chip.active {
-  background: #2a5298;
-  border-color: #2a5298;
+.chip.active {
+  background: #1890ff;
+  border-color: #1890ff;
   color: white;
 }
 
-.example-chip:disabled {
+.chip:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-@media (max-width: 600px) {
-  .compact-input-panel {
-    padding: 10px 12px;
-  }
-  
-  .input-row {
-    flex-wrap: wrap;
-  }
-  
-  .input-group {
-    flex: 1 1 100%;
-    margin-bottom: 4px;
-  }
-  
-  .icon-button span {
+/* 响应式 - 平板 */
+@media (max-width: 1024px) {
+  .example-chips {
     display: none;
   }
   
-  .icon-button {
-    padding: 8px;
+  .examples-label {
+    display: none;
   }
   
-  .examples-row {
-    margin-top: 8px;
-    padding-top: 8px;
+  .divider:last-of-type {
+    display: none;
+  }
+}
+
+/* 响应式 - 移动端 */
+@media (max-width: 640px) {
+  .compact-input-panel {
+    gap: 8px;
+  }
+  
+  .input-field {
+    width: 100px;
+  }
+  
+  .btn span {
+    display: none;
+  }
+  
+  .btn {
+    padding: 0 8px;
   }
 }

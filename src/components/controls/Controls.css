@@ -1,0 +1,121 @@
+/* 80px控制面板 */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  gap: 16px;
+}
+
+/* 控制按钮组 */
+.control-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.control-buttons button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  color: #595959;
+  border-color: #d9d9d9;
+}
+
+.control-buttons button:hover:not(:disabled) {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.control-buttons button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 播放按钮特殊样式 */
+.play-button {
+  background: #52c41a !important;
+  color: white !important;
+  border-color: #52c41a !important;
+}
+
+.play-button:hover:not(:disabled) {
+  background: #73d13d !important;
+  border-color: #73d13d !important;
+}
+
+.pause-button {
+  background: #faad14 !important;
+  color: white !important;
+  border-color: #faad14 !important;
+}
+
+.pause-button:hover {
+  background: #ffc53d !important;
+  border-color: #ffc53d !important;
+}
+
+/* 进度条容器 */
+.progress-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 400px;
+}
+
+.progress-bar {
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #52c41a;
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #8c8c8c;
+  text-align: center;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .controls {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 10px;
+  }
+  
+  .progress-container {
+    order: -1;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .control-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .control-buttons button {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}

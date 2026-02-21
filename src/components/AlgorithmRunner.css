@@ -3,21 +3,23 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #f0f2f5;
   overflow: hidden;
   box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 输入区域 - 固定高度 */
+/* 输入区域 - 固定高度 48px */
 .input-section {
-  padding: 8px 16px;
-  background: white;
-  border-bottom: 1px solid #e1e4e8;
+  padding: 0 24px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e8e8e8;
   flex-shrink: 0;
-  height: 60px;
+  height: 48px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 /* 主内容区 - 左右分栏，固定高度 */
@@ -25,11 +27,12 @@
   display: flex;
   flex: 1;
   overflow: hidden;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 16px;
+  padding: 16px 24px;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+  background: #f0f2f5;
 }
 
 /* 画布区域 - 左侧，占据大部分空间 */
@@ -44,33 +47,40 @@
   height: 100%;
 }
 
-/* 代码区域 - 右侧，固定宽度 */
+/* 代码区域 - 右侧，固定宽度 360px */
 .code-section {
-  width: 340px;
+  width: 360px;
   flex-shrink: 0;
-  background: white;
+  background: #1e1e1e;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* 底部控制区 - 固定高度 */
+/* 底部控制区 - 固定高度 80px */
 .bottom-controls {
   background: white;
-  border-top: 1px solid #e1e4e8;
-  padding: 8px 16px;
+  border-top: 1px solid #e8e8e8;
+  padding: 12px 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
-  height: 110px;
+  height: 80px;
   box-sizing: border-box;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* 响应式布局 */
+@media (max-width: 1024px) {
+  .code-section {
+    width: 320px;
+  }
+}
+
 @media (max-width: 900px) {
   .code-section {
     width: 280px;
@@ -80,14 +90,25 @@
 @media (max-width: 768px) {
   .main-content {
     flex-direction: column;
+    padding: 12px;
   }
   
   .code-section {
     width: 100%;
-    min-height: 200px;
+    height: 35%;
+    min-height: 160px;
   }
   
   .canvas-section {
+    height: 65%;
     min-height: 200px;
+  }
+  
+  .input-section {
+    height: auto;
+    min-height: 48px;
+    padding: 8px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
