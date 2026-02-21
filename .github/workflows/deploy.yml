@@ -2,35 +2,45 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main # 当主分支有提交时触发
+    branches: [main, master]
+  workflow_dispatch:
 
-# 设置部署权限
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 代码
-        uses: actions/checkout@v3
-        
+        uses: actions/checkout@v4
+
       - name: 设置 Node.js 环境
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
-          
+
       - name: 安装依赖
-        run: npm install --legacy-peer-deps
-        
+        run: npm ci
+
       - name: 构建项目
         run: npm run build
-        
-      - name: 部署到 GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v4
+
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: dist # Vite 默认的构建输出目录
-          branch: gh-pages # 部署到的分支
-          clean: true # 部署前清理分支 
+          path: './dist'
+
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 
