@@ -145,7 +145,18 @@ export interface CanvasLabel {
   tone?: 'neutral' | 'accent' | 'warning';
 }
 
+export interface CanvasAnnotation {
+  id: string;
+  text: LocalizedText;
+  textEn?: LocalizedText;
+  x: number;
+  y: number;
+  kind?: 'hint' | 'summary';
+}
+
 export interface CanvasFrame {
+  annotations?: CanvasAnnotation[];
+  annotationsEn?: CanvasAnnotation[];
   /** Non-data glyphs such as explicit left/right boundary arrows. */
   decorations?: CanvasNode[];
   decorationsEn?: CanvasNode[];

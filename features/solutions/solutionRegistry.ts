@@ -37,89 +37,97 @@ function createSteps(input: string): AlgorithmStep[] {
   let left = 0;
   let bestStart = 0;
   let bestLength = 0;
-  let focusIndex: number | null = null;
-  let previousFocus: number | null = null;
 
   const pushFrame = (data: FrameData, title: string, titleEn: string, narration: string, narrationEn: string, operation: NonNullable<AlgorithmStep['operation']>, anchor: string, notes: string, notesEn: string) => {
     const { left: l, right: r, windowStart, windowEnd, candidate, previous } = data;
-    const ids = new Set<number>();
-    lastSeen.forEach((index) => ids.add(index));
-    if (candidate !== null) ids.add(candidate);
-    const indexList = [...ids].sort((a, b) => a - b);
-    const tableStart = chars.length > 0 ? 100 + Math.max(chars.length, 1) * 52 + 84 : 350;
-    const nodes = chars.map((label, index) => {
+    const showMap = data.phase === 'inspect';
+    const inputViewport = chars.length > 10;
+    const focusRange = new Set<number>();
+    if (inputViewport) {
+      const start = Math.max(0, Math.min(chars.length - 10, l - 3));
+      for (let index = start; index < Math.min(chars.length, start + 10); index += 1) focusRange.add(index);
+      if (candidate !== null) focusRange.add(candidate);
+      if (previous !== null) focusRange.add(previous);
+      if (data.phase === 'finish' && data.bestLength) {
+        for (let index = data.bestStart; index < data.bestStart + data.bestLength; index += 1) focusRange.add(index);
+      }
+    } else {
+      chars.forEach((_char, index) => focusRange.add(index));
+    }
+    const visibleIndices = [...focusRange].sort((a, b) => a - b);
+    const displayIndices = visibleIndices.slice(0, 10);
+    const allMapEntries = [...lastSeen.entries()];
+    const candidateChar = candidate === null ? undefined : chars[candidate];
+    const candidateEntry = candidateChar === undefined ? undefined : allMapEntries.find(([char]) => char === candidateChar);
+    const recentEntries = allMapEntries.filter(([char]) => char !== candidateChar).slice(-1);
+    const mapEntries = showMap ? [...recentEntries, ...(candidateChar === undefined ? [] : [[candidateChar, candidateEntry?.[1] ?? candidate] as [string, number]])] : [];
+    const mapChars = mapEntries.map(([char]) => char);
+    const tableStart = showMap ? 490 : 0;
+    const inputWidth = showMap ? 450 : 840;
+    const nodeX = (index: number) => (inputWidth - Math.max(displayIndices.length - 1, 0) * 62) / 2 + displayIndices.indexOf(index) * 62;
+    const nodes = displayIndices.map((index) => {
+      const label = chars[index];
       const inWindow = index >= windowStart && index <= windowEnd;
       const isCandidate = index === candidate;
       const isBest = data.bestLength > 0 && index >= data.bestStart && index < data.bestStart + data.bestLength;
       const status = data.phase === 'finish' && isBest ? 'done' as const
         : data.phase === 'inspect' && (index === previous || isCandidate) ? 'compare' as const
         : isCandidate ? (data.phase === 'inspect' ? 'compare' as const : 'current' as const)
-        : inWindow && index === focusIndex && !isCandidate ? 'current' as const
-        : index === focusIndex && !isCandidate ? 'current' as const
-        : inWindow && data.phase !== 'inspect' ? 'visited' as const
+        : inWindow ? 'visited' as const
         : isBest ? 'done' as const
-        : index === previousFocus ? 'visited' as const : 'idle' as const;
+        : 'idle' as const;
       return {
-        id: `char-${index}`, label, x: chars.length <= 1 ? 600 : 100 + index * (1000 / (chars.length - 1)), y: 275,
-        radius: chars.length > 20 ? 18 : 28, badge: String(index), sublabel: `s[${index}]`, status
+        id: `char-${index}`, label, x: nodeX(index), y: 325,
+        radius: 25, badge: String(index), sublabel: `${index}`, status
       };
     });
-    const byIndex = (index: number) => nodes[index]?.x ?? 600;
-    const pointers = [
-      { id: 'left-pointer', from: { x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 349 }, to: { x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 315 }, text: { 'zh-CN': `左指针 L=${l}`, en: `Left L=${l}` }, kind: 'pointer' as const },
-      ...(r >= 0 && r < chars.length ? [{ id: 'right-pointer', from: { x: byIndex(r), y: 429 }, to: { x: byIndex(r), y: 385 }, text: { 'zh-CN': `右指针 R=${r}`, en: `Right R=${r}` }, kind: 'pointer' as const }] : [])
-    ];
-    const flowArrows = data.phase === 'inspect' && candidate !== null && previous !== null ? [{
-      id: `repeat-${steps.length}`, from: { x: byIndex(candidate), y: 236 }, to: { x: byIndex(previous), y: 236 },
-      text: { 'zh-CN': `${chars[candidate]} 已见于 ${previous}`, en: `${chars[candidate]} last seen at ${previous}` },
-      kind: 'flow' as const, curve: -20, labelOffset: { x: 0, y: -10 }
-    }] : data.phase === 'shrink' && previous !== null ? [{
-      id: `jump-${steps.length}`, from: { x: byIndex(Math.min(data.previousLeft ?? l, Math.max(chars.length - 1, 0))), y: 430 }, to: { x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 430 },
-      text: { 'zh-CN': `left: ${data.previousLeft ?? l} → ${l}`, en: `left: ${data.previousLeft ?? l} → ${l}` },
-      kind: 'transfer' as const, curve: 18, labelOffset: { x: 0, y: 14 }
-    }] : data.phase === 'include' && candidate !== null ? [{
-      id: `include-${steps.length}`, from: { x: byIndex(candidate), y: 429 }, to: { x: byIndex(candidate), y: 385 },
-      text: { 'zh-CN': `加入窗口 ${chars[candidate]}`, en: `Include ${chars[candidate]}` },
-      kind: 'transfer' as const, labelOffset: { x: 56, y: -4 }
-    }] : data.phase === 'record' && data.bestLength > 0 ? [{
-      id: `best-${steps.length}`, from: { x: byIndex(data.bestStart), y: 474 }, to: { x: byIndex(data.bestStart + data.bestLength - 1), y: 474 },
-      text: { 'zh-CN': `记录最长长度 ${data.bestLength}`, en: `Record best length ${data.bestLength}` },
-      kind: 'return' as const, labelOffset: { x: 0, y: 14 }
+    const byIndex = (index: number) => {
+      const node = nodes.find(item => item.id === `char-${index}`);
+      return node?.x ?? 600;
+    }
+    const pointers = !showMap && data.phase !== 'finish' ? [
+      ...(displayIndices.includes(l) ? [{ id: 'left-pointer', from: { x: byIndex(l), y: 430 }, to: { x: byIndex(l), y: 390 }, text: { 'zh-CN': `左 L=${l}`, en: `Left L=${l}` }, kind: 'pointer' as const }] : []),
+      ...(r >= 0 && displayIndices.includes(r) ? [{ id: 'right-pointer', from: { x: byIndex(r), y: 472 }, to: { x: byIndex(r), y: 432 }, text: { 'zh-CN': `右 R=${r}`, en: `Right R=${r}` }, kind: 'pointer' as const }] : [])
+    ] : [];
+    const flowArrows = !showMap && data.phase === 'shrink' && previous !== null ? [{
+      id: `jump-${steps.length}`, from: { x: byIndex(Math.min(data.previousLeft ?? l, Math.max(chars.length - 1, 0))), y: 420 }, to: { x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 420 },
+      text: { 'zh-CN': `移动左边界`, en: `Move left` },
+      kind: 'transfer' as const, curve: 0, labelOffset: { x: 0, y: 18 }
     }] : [];
-    const cellX = (column: number) => tableStart + column * 104;
-    const hashRows = indexList.map((index, row) => {
-      const char = chars[index];
-      const id = `last-${index}`;
-      const status = 'visited' as const;
-      const x = cellX(row % Math.max(1, Math.floor((1120 - tableStart) / 104)));
-      const y = 545 + Math.floor(row / Math.max(1, Math.floor((1120 - tableStart) / 104))) * 58;
-      return { id, char, index, x, y, status };
-    });
-    const positions = new Map(hashRows.map(row => [row.index, { x: row.x, y: row.y }]));
+    const mapCell = (column: number) => ({ x: tableStart + (column % 2) * 72, y: 560 + Math.floor(column / 2) * 58 });
+    const hashRows = mapEntries.map(([char, index], row) => ({ char, index, id: `last-${char.codePointAt(0) ?? row}`, ...mapCell(row) }));
+    const positions = new Map(hashRows.map(row => [row.char, { x: row.x, y: row.y }]));
     const allNodes = [
       ...nodes,
-      ...hashRows.map(row => ({ id: row.id, label: `${row.char}→${row.index}`, x: row.x, y: row.y, radius: 31, badge: 'lastSeen', sublabel: `index ${row.index}`, status: row.status }))
+      ...hashRows.map(row => ({ id: row.id, label: `${row.char} → ${row.index}`, x: row.x, y: row.y, radius: 17, badge: undefined, sublabel: undefined, status: 'idle' as const }))
     ];
     const frameArrows = [
       ...pointers,
       ...flowArrows,
-      ...(data.phase === 'inspect' && candidate !== null && previous !== null && positions.has(previous) ? [{
-        id: `lookup-${steps.length}`, from: { x: byIndex(candidate), y: 230 }, to: positions.get(previous)!,
-        text: { 'zh-CN': `查 lastSeen[${chars[candidate]}]`, en: `Lookup lastSeen[${chars[candidate]}]` }, kind: 'flow' as const, curve: 28
-      }] : []),
-      ...(data.phase === 'record' && candidate !== null ? [{
-        id: `store-${steps.length}`, from: { x: byIndex(candidate), y: 420 }, to: { x: cellX(indexList.length % Math.max(1, Math.floor((1120 - tableStart) / 104))), y: 510 },
-        text: { 'zh-CN': `写入 ${chars[candidate]}→${candidate}`, en: `Store ${chars[candidate]}→${candidate}` }, kind: 'transfer' as const, curve: 24
+      ...(data.phase === 'inspect' && candidate !== null && previous !== null && positions.has(chars[candidate]) ? [{
+        id: `lookup-${steps.length}`, from: { x: byIndex(candidate), y: 290 }, to: positions.get(chars[candidate])!,
+        text: { 'zh-CN': '查上次位置', en: 'Check last time' }, kind: 'flow' as const, curve: 0, labelOffset: { x: 0, y: -8 }
       }] : [])
     ];
     const effectiveWindow = windowStart <= windowEnd && chars.length ? chars.slice(windowStart, windowEnd + 1).join('') : '';
     const rangeText = windowStart <= windowEnd ? `[${windowStart}, ${windowEnd}]` : '空';
-    const labels: AlgorithmStep['frame']['labels'] = effectiveWindow ? [{
+    const labels: AlgorithmStep['frame']['labels'] = data.phase === 'finish' && data.bestLength > 0 ? [{
+      id: 'best-label', targetId: `char-${data.bestStart}`,
+      text: { 'zh-CN': `答案「${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}」`, en: `Answer “${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}”` },
+      detail: { 'zh-CN': `区间 [${data.bestStart}, ${data.bestStart + data.bestLength}) · 长度 ${data.bestLength}`, en: `Range [${data.bestStart}, ${data.bestStart + data.bestLength}) · length ${data.bestLength}` },
+      position: 'top', variant: 'callout', tone: 'accent'
+    }] : !showMap && data.phase === 'include' && effectiveWindow ? [{
       id: 'window-label', targetId: `char-${Math.max(windowStart, 0)}`,
-      text: { 'zh-CN': `有效窗口 ${rangeText}「${effectiveWindow}」`, en: `Valid window ${rangeText} “${effectiveWindow}”` },
-      detail: { 'zh-CN': `${data.currentLength} 个字符 · 无重复`, en: `${data.currentLength} character(s) · no duplicates` },
+      text: { 'zh-CN': `窗口 ${effectiveWindow}`, en: `Window ${effectiveWindow}` },
+      detail: { 'zh-CN': `${data.currentLength} 个字符`, en: `${data.currentLength} characters` },
       position: 'top', variant: 'callout', tone: 'accent'
     }] : [];
+    if (data.phase === 'finish' && data.bestLength > 0) {
+      const answerText = `答案「${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}」`;
+      const existingIndex = labels.findIndex(label => label.id === 'best-label');
+      if (existingIndex >= 0) labels[existingIndex] = { ...labels[existingIndex], position: 'bottom' };
+      else labels.push({ id: 'best-label', targetId: `char-${data.bestStart}`, text: { 'zh-CN': answerText, en: `Answer “${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}”` }, detail: { 'zh-CN': `长度 ${data.bestLength}`, en: `Length ${data.bestLength}` }, position: 'bottom', variant: 'callout', tone: 'accent' });
+    }
     if (!chars.length) labels.push({
       id: 'empty-label', targetId: 'empty-anchor', text: { 'zh-CN': '空字符串', en: 'Empty string' },
       detail: { 'zh-CN': '没有字符可读', en: 'No characters to read' }, position: 'top', variant: 'callout', tone: 'neutral'
@@ -130,19 +138,21 @@ function createSteps(input: string): AlgorithmStep[] {
       narration: narrationFull, narrationEn, operation,
       binding: { anchorIds: [anchor], variables: { left: l, right: Math.max(r, 0), window: effectiveWindow, currentLength: data.currentLength, bestLength: data.bestLength, lastSeen: Object.fromEntries([...lastSeen.entries()]) } },
       frame: {
+        annotations: showMap && mapChars.length ? [{ id: 'map-title', text: { 'zh-CN': '最近出现记录', en: 'Recent characters' }, x: tableStart, y: 530, kind: 'hint' }] : [],
+        annotationsEn: showMap && mapChars.length ? [{ id: 'map-title', text: 'Recent characters', x: tableStart, y: 530, kind: 'hint' }] : [],
         decorations: chars.length ? [
-          { id: 'pointer-left', label: `L=${l}`, x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 315, radius: 17, status: 'current' as const },
-          ...(r >= 0 && r < chars.length ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 385, radius: 17, status: 'compare' as const }] : [])
+          ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: '左边界' }] : []),
+          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 480, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? '重复?' : '右边界' }] : [])
         ] : [],
         decorationsEn: chars.length ? [
-          { id: 'pointer-left', label: `L=${l}`, x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 315, radius: 17, status: 'current' as const },
-          ...(r >= 0 && r < chars.length ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 385, radius: 17, status: 'compare' as const }] : [])
+          ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: 'left' }] : []),
+          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 480, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? 'repeat?' : 'right' }] : [])
         ] : [],
+        notes: [{ 'zh-CN': notes, en: notesEn }], notesEn: [notesEn],
         nodes: chars.length ? allNodes : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],
         nodesEn: chars.length ? allNodes.map(node => ({ ...node, label: node.label })) : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],
         edges: [], arrows: frameArrows, arrowsEn: frameArrows,
         labels, labelsEn: labels.map(label => ({ ...label, text: typeof label.text === 'string' ? label.text : label.text.en, detail: typeof label.detail === 'string' ? label.detail : label.detail?.en })),
-        notes: [{ 'zh-CN': notes, en: notesEn }], notesEn: [notesEn],
         metrics: [
           { label: { 'zh-CN': '窗口区间', en: 'Window range' }, value: rangeText },
           { label: { 'zh-CN': '当前长度', en: 'Current length' }, value: data.currentLength },
@@ -172,7 +182,6 @@ function createSteps(input: string): AlgorithmStep[] {
   for (let right = 0; right < chars.length; right += 1) {
     const char = chars[right];
     const previous = lastSeen.get(char);
-    focusIndex = right;
     const oldLeft = left;
     const repeatedInside = previous !== undefined && previous >= left;
     if (repeatedInside) {
@@ -201,7 +210,6 @@ function createSteps(input: string): AlgorithmStep[] {
       `Read candidate “${char}”. The range from left=${left} to right=${right} is now unique; including it forms [${left},${right}] “${chars.slice(left, right + 1).join('')}”, current length ${right - left + 1}.`,
       'read', 'read', `字符进入窗口，接下来更新 lastSeen[${char}]。`, `The character enters the window; next update lastSeen[${char}].`));
     lastSeen.set(char, right);
-    focusIndex = right;
     const currentLength = right - left + 1;
     if (currentLength > bestLength) {
       const previousBest = bestLength;
@@ -219,7 +227,6 @@ function createSteps(input: string): AlgorithmStep[] {
         `Window [${left},${right}] “${chars.slice(left, right + 1).join('')}” has length ${currentLength}, not greater than best=${bestLength}; keep the answer and update lastSeen[${char}]=${right}.`,
         'insert', 'store', `即使答案不变，也要更新字符最近位置供后续查询。`, `Even when best stays unchanged, update the last-seen index for future lookups.`));
     }
-    previousFocus = right;
   }
   steps.push(pushFrame({ left, right: chars.length - 1, windowStart: left, windowEnd: chars.length - 1, currentLength: chars.length - left, bestStart, bestLength, candidate: null, previous: null, highlightedMapIndex: null, phase: 'finish' },
     '返回最终答案', 'Return the final answer',
