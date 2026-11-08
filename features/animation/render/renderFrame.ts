@@ -21,6 +21,7 @@ export function renderFrame(
   const visibleFrame = locale === 'en'
     ? {
         ...frame,
+        decorations: frame.decorationsEn ?? frame.decorations,
         nodes: frame.nodesEn ?? frame.nodes,
         arrows: frame.arrowsEn ?? frame.arrows,
         labels: frame.labelsEn ?? frame.labels
@@ -31,13 +32,15 @@ export function renderFrame(
     updateMs: motionDuration(MOTION.updateMs, speed, reduced),
     exitMs: motionDuration(MOTION.exitMs, speed, reduced),
     arrowMs: motionDuration(MOTION.arrowMs, speed, reduced),
-    reduced
+    reduced,
+    locale
   };
 
   const visibleNodes = locale === 'en' ? (visibleFrame.nodes ?? frame.nodes) : frame.nodes;
   const visibleLabels = locale === 'en' ? (visibleFrame.labels ?? frame.labels) : frame.labels;
   const visibleArrows = locale === 'en' ? (visibleFrame.arrows ?? frame.arrows) : frame.arrows;
   const localizedNodeById = new Map(visibleNodes.map((node) => [node.id, node]));
+  renderNodes(layer.select<SVGGElement>('.layer-decorations'), visibleFrame.decorations ?? [], timing, locale);
   renderContainers(layer.select<SVGGElement>('.layer-containers'), frame.containers ?? [], timing);
   renderEdges(layer.select<SVGGElement>('.layer-edges'), frame.edges, localizedNodeById, timing);
   renderArrows(layer.select<SVGGElement>('.layer-arrows'), visibleArrows, timing, locale);

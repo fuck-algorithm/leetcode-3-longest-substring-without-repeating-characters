@@ -146,6 +146,9 @@ export interface CanvasLabel {
 }
 
 export interface CanvasFrame {
+  /** Non-data glyphs such as explicit left/right boundary arrows. */
+  decorations?: CanvasNode[];
+  decorationsEn?: CanvasNode[];
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   arrows: CanvasArrow[];

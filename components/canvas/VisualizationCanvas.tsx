@@ -60,6 +60,13 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
   const narration = locale === 'en'
     ? step.narrationEn ?? step.descriptionEn ?? ''
     : step.narration ?? step.description;
+  const renderedNodes = locale === 'en' ? step.frame.nodesEn ?? step.frame.nodes : step.frame.nodes;
+  const focusedNodes = renderedNodes.filter((node) => node.status === 'current');
+  const comparedNodes = renderedNodes.filter((node) => node.status === 'compare');
+  const completedNodes = renderedNodes.filter((node) => node.status === 'done');
+  const stepContext = locale === 'en'
+    ? `Step ${step.id + 1}: ${narration} ${focusedNodes.length ? `Focus: ${focusedNodes.map((node) => node.label).join(', ')}.` : ''} ${comparedNodes.length ? `Compare: ${comparedNodes.map((node) => node.label).join(' vs ')}.` : ''} ${completedNodes.length ? `Completed result: ${completedNodes.map((node) => node.label).join(', ')}.` : ''}`
+    : `第 ${step.id + 1} 步：${narration}${focusedNodes.length ? ` 当前焦点：${focusedNodes.map((node) => node.label).join('、')}。` : ''}${comparedNodes.length ? ` 正在比较：${comparedNodes.map((node) => node.label).join(' 与 ')}。` : ''}${completedNodes.length ? ` 已确认结果：${completedNodes.map((node) => node.label).join('、')}。` : ''}`;
   const localize = (value: string | { 'zh-CN': string; en: string }) => typeof value === 'string' ? value : value[locale];
   const notes = locale === 'en' ? step.frame.notesEn ?? [] : step.frame.notes;
   const t = (english: string, chinese: string) => locale === 'en' ? english : chinese;
@@ -123,6 +130,9 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
             {operation}
           </span>
         ) : null}
+        <span className="step-focus-summary" data-testid="step-focus-summary">{locale === 'en'
+          ? `${focusedNodes.length ? `Focus: ${focusedNodes.map((node) => node.label).join(', ')}` : 'Focus: setup'}${comparedNodes.length ? ` · Compare: ${comparedNodes.map((node) => node.label).join(' ↔ ')}` : ''}${completedNodes.length ? ` · Result: ${completedNodes.map((node) => node.label).join(', ')}` : ''}`
+          : `${focusedNodes.length ? `焦点：${focusedNodes.map((node) => node.label).join('、')}` : '焦点：初始化'}${comparedNodes.length ? ` · 比较：${comparedNodes.map((node) => node.label).join(' ↔ ')}` : ''}${completedNodes.length ? ` · 结果：${completedNodes.map((node) => node.label).join('、')}` : ''}`}</span>
       </div>
 
       <svg
@@ -131,6 +141,7 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
         className="viz-canvas"
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
+        aria-label={stepContext}
       >
         <defs>
           {MARKERS.map((marker) => (
@@ -152,6 +163,7 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
           <g className="layer-containers" />
           <g className="layer-edges" />
           <g className="layer-arrows" />
+          <g className="layer-decorations" />
           <g className="layer-nodes" />
           <g className="layer-labels" />
         </g>
