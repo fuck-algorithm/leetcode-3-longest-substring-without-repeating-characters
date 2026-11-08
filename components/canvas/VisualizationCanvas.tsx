@@ -17,7 +17,7 @@ type Props = {
   speed?: number;
 };
 
-const WIDTH = 1200;
+const WIDTH = 900;
 const HEIGHT = 720;
 const BASE_RATIO = WIDTH / HEIGHT;
 
@@ -69,6 +69,7 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
     : `第 ${step.id + 1} 步：${narration}${focusedNodes.length ? ` 当前焦点：${focusedNodes.map((node) => node.label).join('、')}。` : ''}${comparedNodes.length ? ` 正在比较：${comparedNodes.map((node) => node.label).join(' 与 ')}。` : ''}${completedNodes.length ? ` 已确认结果：${completedNodes.map((node) => node.label).join('、')}。` : ''}`;
   const localize = (value: string | { 'zh-CN': string; en: string }) => typeof value === 'string' ? value : value[locale];
   const notes = locale === 'en' ? step.frame.notesEn ?? [] : step.frame.notes;
+  const annotations = locale === 'en' ? step.frame.annotationsEn ?? step.frame.annotations ?? [] : step.frame.annotations ?? [];
   const t = (english: string, chinese: string) => locale === 'en' ? english : chinese;
 
   useEffect(() => {
@@ -99,7 +100,10 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
     });
 
     svg.call(zoom as never);
-    svg.call(zoom.transform as never, d3.zoomIdentity);
+    if (!svg.attr('data-zoom-initialized')) {
+      svg.call(zoom.transform as never, d3.zoomIdentity);
+      svg.attr('data-zoom-initialized', 'true');
+    }
   }, []);
 
   useEffect(() => {
@@ -130,9 +134,21 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
             {operation}
           </span>
         ) : null}
-        <span className="step-focus-summary" data-testid="step-focus-summary">{locale === 'en'
-          ? `${focusedNodes.length ? `Focus: ${focusedNodes.map((node) => node.label).join(', ')}` : 'Focus: setup'}${comparedNodes.length ? ` · Compare: ${comparedNodes.map((node) => node.label).join(' ↔ ')}` : ''}${completedNodes.length ? ` · Result: ${completedNodes.map((node) => node.label).join(', ')}` : ''}`
-          : `${focusedNodes.length ? `焦点：${focusedNodes.map((node) => node.label).join('、')}` : '焦点：初始化'}${comparedNodes.length ? ` · 比较：${comparedNodes.map((node) => node.label).join(' ↔ ')}` : ''}${completedNodes.length ? ` · 结果：${completedNodes.map((node) => node.label).join('、')}` : ''}`}</span>
+        <span className="step-focus-summary" data-testid="step-focus-summary">
+          {comparedNodes.length
+            ? locale === 'en'
+              ? `Comparing ${comparedNodes.map(node => node.label).join(' and ')}`
+              : `比较 ${comparedNodes.map(node => node.label).join(' 和 ')}`
+            : completedNodes.length
+              ? locale === 'en'
+                ? `Answer: ${completedNodes.map(node => node.label).join('')}`
+                : `答案：${completedNodes.map(node => node.label).join('')}`
+              : focusedNodes.length
+                ? locale === 'en'
+                  ? `Current: ${focusedNodes[0].label}`
+                  : `当前：${focusedNodes[0].label}`
+                : locale === 'en' ? 'Ready' : '准备开始'}
+        </span>
       </div>
 
       <svg
@@ -159,13 +175,16 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
           ))}
         </defs>
         <g ref={zoomLayerRef} className="zoom-layer">
-          <rect className="canvas-backdrop" x={-2000} y={-2000} width={5200} height={4720} />
+          <rect className="canvas-backdrop" x={0} y={0} width={WIDTH} height={HEIGHT} />
           <g className="layer-containers" />
           <g className="layer-edges" />
           <g className="layer-arrows" />
           <g className="layer-decorations" />
           <g className="layer-nodes" />
           <g className="layer-labels" />
+          <g className="layer-annotations">
+            {annotations.map((annotation) => <text key={annotation.id} className="canvas-annotation" x={annotation.x} y={annotation.y}>{localize(annotation.text)}</text>)}
+          </g>
         </g>
       </svg>
 

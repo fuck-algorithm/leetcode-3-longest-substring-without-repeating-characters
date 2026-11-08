@@ -140,18 +140,18 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await expect(narration).not.toHaveText(before);
     await expect(narration).toContainText('lastSeen');
     await expect(narration).toContainText('lastSeen lookup returns 0');
-    await expect(page.locator('[data-node-id="last-0"]')).toBeVisible();
+    await expect(page.locator('[data-node-id="last-97"]')).toHaveCount(1);
     await expect(page.locator('[data-node-id="char-3"][data-status="compare"]')).toBeVisible();
     await expect(page.locator('[data-node-id="char-0"][data-status="compare"]')).toBeVisible();
     await expect(page.locator('.layer-decorations [data-node-id="pointer-left"]')).toBeVisible();
     await expect(page.locator('.layer-decorations [data-node-id="pointer-right"]')).toBeVisible();
-    await expect(page.locator('.arrow-label').filter({ hasText: 'lastSeen' })).toBeVisible();
+    await expect(page.locator('.arrow-label').filter({ hasText: 'Repeat?' })).toBeVisible();
     await expect(page.locator('[data-status="current"]')).toHaveCount(1);
     const repeatedExplanation = await narration.innerText();
     await page.getByTestId('next-step-btn').click();
     await expect(narration).not.toHaveText(repeatedExplanation);
     await expect(narration).toContainText('left=max(0, 0+1)=1');
-    await expect(page.locator('.arrow-label').filter({ hasText: '0 → 1' })).toBeVisible();
+    await expect(page.locator('.arrow-label').filter({ hasText: 'Move left' })).toBeVisible();
     await expect(page.getByTestId('variable-watch')).toContainText('left');
   });
 

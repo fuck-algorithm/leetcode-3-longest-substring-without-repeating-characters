@@ -81,7 +81,7 @@ export function renderArrows(layer: LayerSelection, arrowsData: CanvasArrow[], t
         .attr('class', 'arrow-label')
         .attr('text-anchor', 'middle')
         .attr('x', (arrow) => arrowLabelPoint(arrow).x + (arrow.labelOffset?.x ?? 0))
-        .attr('y', (arrow) => arrowLabelPoint(arrow).y + (arrow.labelOffset?.y ?? -10))
+        .attr('y', (arrow) => arrowLabelPoint(arrow).y + (arrow.labelOffset?.y ?? -18))
     );
 
   const arrows = enter.merge(join);
@@ -106,7 +106,7 @@ export function renderArrows(layer: LayerSelection, arrowsData: CanvasArrow[], t
     path.attr('d', arrowPath);
     label
       .attr('x', (arrow) => arrowLabelPoint(arrow).x + (arrow.labelOffset?.x ?? 0))
-      .attr('y', (arrow) => arrowLabelPoint(arrow).y + (arrow.labelOffset?.y ?? -10));
+      .attr('y', (arrow) => arrowLabelPoint(arrow).y + (arrow.labelOffset?.y ?? -18));
     return;
   }
 
@@ -140,5 +140,5 @@ export function renderArrows(layer: LayerSelection, arrowsData: CanvasArrow[], t
     .transition('label')
     .duration(timing.updateMs)
     .attr('x', (arrow) => arrowLabelPoint(arrow).x + (arrow.labelOffset?.x ?? 0))
-    .attr('y', (arrow) => arrowLabelPoint(arrow).y + (arrow.labelOffset?.y ?? -10));
+    .attr('y', (arrow) => arrowLabelPoint(arrow).y + (arrow.labelOffset?.y ?? -18));
 }

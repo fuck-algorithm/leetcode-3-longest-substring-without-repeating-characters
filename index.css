@@ -375,7 +375,7 @@ body {
 
 .canvas-node .node-label {
   fill: #0f1f1b;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   pointer-events: none;
   transition: fill 240ms ease;
@@ -394,7 +394,7 @@ body {
 
 .canvas-node .node-badge {
   fill: #5d716b;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   pointer-events: none;
   paint-order: stroke;
@@ -405,7 +405,7 @@ body {
 
 .canvas-node .node-sublabel {
   fill: #5d716b;
-  font-size: 9.5px;
+  font-size: 12px;
   pointer-events: none;
   paint-order: stroke;
   stroke: #fbfefd;
@@ -442,11 +442,22 @@ body {
 .edge-label,
 .arrow-label {
   fill: #315e52;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
   paint-order: stroke;
-  stroke: #fbfefd;
-  stroke-width: 4px;
+  stroke: #fff;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  font-weight: 700;
+}
+
+.canvas-annotation {
+  fill: #52645f;
+  font-size: 12px;
+  font-weight: 600;
+  text-anchor: start;
+  paint-order: stroke;
+  stroke: #f7fbfa;
+  stroke-width: 5px;
   stroke-linejoin: round;
 }
 

@@ -24,11 +24,11 @@ describe('createSolutionRegistry', () => {
     const solution = createSolutionRegistry('abcabcbb')[0];
     const duplicate = solution.steps.find((step) => step.narration?.includes('候选字符 s[3]'))!;
     expect(duplicate.binding.variables).toMatchObject({ left: 0, right: 3, window: 'abc' });
-    expect(duplicate.frame.nodes.some((node) => node.id === 'last-0' && node.label === 'a→0')).toBe(true);
-    expect(duplicate.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('0'))).toBe(true);
+    expect(duplicate.frame.nodes.some((node) => node.id === 'last-97' && node.label === 'a → 0')).toBe(true);
+    expect(duplicate.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Repeat?'))).toBe(true);
     const shrink = solution.steps.find((step) => step.operation === 'move' && step.binding.variables.right === 3)!;
     expect(shrink.narration).toContain('left=max(0, 0+1)=1');
-    expect(shrink.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('0 → 1'))).toBe(true);
+    expect(shrink.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Move left'))).toBe(true);
     const final = solution.steps.at(-1)!;
     expect(final.narration).toContain('[0,3)');
     expect(final.frame.nodes.filter((node) => node.status === 'done').map((node) => node.label)).toEqual(['a', 'b', 'c']);
@@ -39,7 +39,7 @@ describe('createSolutionRegistry', () => {
     const outside = solution.steps.find((step) => step.narration?.includes('lastSeen[a]=0'))!;
     expect(outside.binding.variables.left).toBe(2);
     expect(outside.narration).toContain('left 保持 2');
-    expect(outside.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('lastSeen'))).toBe(true);
+    expect(outside.frame.nodes.some((node) => node.id === 'last-97' && node.label === 'a → 0')).toBe(true);
   });
 
   it('explains repeated-only inputs and exposes the first answer location', () => {
