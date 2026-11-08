@@ -36,7 +36,7 @@ export const getCharPosition = (
  * @param color2 闪烁色
  */
 export const createFlashingEffect = (
-  selection: d3.Selection<any, unknown, any, unknown>,
+  selection: d3.Selection<SVGGElement, unknown, null, undefined>,
   duration: number,
   times: number,
   color1: string,

@@ -15,7 +15,14 @@ export function useAlgorithmState() {
   const [stateHistory, setStateHistory] = useState<AlgorithmState[]>([]);
   const [currentStateIndex, setCurrentStateIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(() => {
+    try {
+      const saved = Number(localStorage.getItem('playback-speed'));
+      return [0.5, 1, 1.5, 2, 3].includes(saved) ? saved : 1;
+    } catch {
+      return 1;
+    }
+  });
   const [isRunning, setIsRunning] = useState<boolean>(false);
 
   // 获取当前状态 - 如果历史为空或索引无效，返回初始状态
@@ -221,6 +228,11 @@ export function useAlgorithmState() {
   // 处理播放速度变化
   const handleSpeedChange = useCallback((speed: number) => {
     setPlaybackSpeed(speed);
+    try {
+      localStorage.setItem('playback-speed', String(speed));
+    } catch {
+      // 存储不可用时继续使用当前会话速度。
+    }
   }, []);
 
   // 跳转到指定步骤

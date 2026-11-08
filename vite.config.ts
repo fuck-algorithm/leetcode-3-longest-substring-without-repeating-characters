@@ -1,14 +1,27 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// 使用固定端口 32337
-const PORT = 32337;
+const MIN_PORT = 30000;
+const MAX_PORT = 65535;
 
-// https://vite.dev/config/
+function pickPort(): number {
+  const fromEnv = Number(process.env.PORT ?? '');
+  if (Number.isInteger(fromEnv) && fromEnv >= MIN_PORT && fromEnv <= MAX_PORT) {
+    return fromEnv;
+  }
+  return Math.floor(Math.random() * (MAX_PORT - MIN_PORT + 1)) + MIN_PORT;
+}
+
+const appBase = process.env.VITE_APP_BASE ?? '/leetcode-3-longest-substring-without-repeating-characters/';
+
 export default defineConfig({
   plugins: [react()],
-  base: '/leetcode-3-longest-substring-without-repeating-characters/',
+  base: appBase,
   server: {
-    port: PORT,
+    port: pickPort(),
+    strictPort: false
   },
-})
+  preview: {
+    port: pickPort()
+  }
+});

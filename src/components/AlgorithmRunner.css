@@ -1,114 +1,30 @@
 .algorithm-runner {
-  height: 100vh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #f0f2f5;
-  overflow: hidden;
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  width: 100%; height: 100dvh; min-height: 0; display: flex; flex-direction: column;
+  overflow: hidden; box-sizing: border-box; background: #f4f7f5; color: #20352d;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
-
-/* 输入区域 - 固定高度 48px */
-.input-section {
-  padding: 0 24px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e8e8e8;
-  flex-shrink: 0;
-  height: 48px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.input-section { height: 44px; flex: 0 0 44px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid #dce5e1; background: #fff; box-sizing: border-box; }
+.main-content { flex: 1 1 auto; min-height: 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 400px); gap: 8px; padding: 8px; box-sizing: border-box; }
+.canvas-section { min-width: 0; min-height: 0; height: 100%; overflow: hidden; border: 1px solid #dce5e1; border-radius: 9px; background: #fff; }
+.code-section { min-width: 0; min-height: 0; width: auto; height: 100%; overflow: hidden; border: 1px solid #283c35; border-radius: 9px; background: #17241f; }
+.bottom-controls { height: 56px; flex: 0 0 56px; display: grid; grid-template-columns: auto minmax(100px, 1fr) auto; align-items: center; gap: 12px; padding: 4px 12px; box-sizing: border-box; background: #fff; border-top: 1px solid #dce5e1; }
+.algorithm-visualization { width: 100%; height: 100%; min-height: 0; }
+.visualization-svg { display: block; width: 100%; height: 100%; }
+.char-node rect { transition: fill 180ms ease, stroke 180ms ease; }
+.window-range { transition: x 180ms ease, width 180ms ease; }
+@media (max-width: 1099px) {
+  .main-content { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) clamp(180px, 22vh, 240px); }
+  .code-section { grid-row: 2; }
+  .bottom-controls, .controls, .control-buttons { gap: 4px; }
+  .control-buttons button { height: 30px; padding: 0 7px; font-size: 11px; }
+  .custom-speed-control { min-width: 56px; }
+  .speed-display { padding: 3px 5px; }
 }
-
-/* 主内容区 - 左右分栏，固定高度 */
-.main-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  gap: 16px;
-  padding: 16px 24px;
-  min-height: 0;
-  width: 100%;
-  box-sizing: border-box;
-  background: #f0f2f5;
+@media (max-width: 700px) {
+  .input-section { flex-basis: 42px; height: 42px; padding: 0 6px; }
+  .bottom-controls { grid-template-columns: auto minmax(48px, 1fr) auto; gap: 4px; padding: 4px 6px; }
+  .main-content { padding: 4px; gap: 4px; }
 }
-
-/* 画布区域 - 左侧，占据大部分空间 */
-.canvas-section {
-  flex: 2;
-  min-width: 0;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  position: relative;
-  height: 100%;
-}
-
-/* 代码区域 - 右侧，固定宽度 360px */
-.code-section {
-  width: 360px;
-  flex-shrink: 0;
-  background: #1e1e1e;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-/* 底部控制区 - 固定高度 80px */
-.bottom-controls {
-  background: white;
-  border-top: 1px solid #e8e8e8;
-  padding: 12px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0;
-  height: 80px;
-  box-sizing: border-box;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* 响应式布局 */
-@media (max-width: 1024px) {
-  .code-section {
-    width: 320px;
-  }
-}
-
-@media (max-width: 900px) {
-  .code-section {
-    width: 280px;
-  }
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    flex-direction: column;
-    padding: 12px;
-  }
-  
-  .code-section {
-    width: 100%;
-    height: 35%;
-    min-height: 160px;
-  }
-  
-  .canvas-section {
-    height: 65%;
-    min-height: 200px;
-  }
-  
-  .input-section {
-    height: auto;
-    min-height: 48px;
-    padding: 8px 16px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

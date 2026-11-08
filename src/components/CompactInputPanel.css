@@ -1,16 +1,19 @@
 /* 48px单行布局输入面板 */
 .compact-input-panel {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 48px;
+  height: 42px;
   width: 100%;
+  min-width: 0;
+  overflow-x: auto;
   box-sizing: border-box;
 }
 
 .input-label {
   font-size: 14px;
-  color: #595959;
+  color: #53675f;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -29,7 +32,7 @@
 
 .input-field:focus {
   outline: none;
-  border-color: #1890ff;
+  border-color: #25856a;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15);
 }
 
@@ -82,27 +85,27 @@
 }
 
 .btn-primary {
-  background: #1890ff;
+  background: #25856a;
   color: white;
-  border-color: #1890ff;
+  border-color: #25856a;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #40a9ff;
-  border-color: #40a9ff;
+  background: #19765a;
+  border-color: #19765a;
 }
 
 .btn-secondary {
   background: white;
-  color: #595959;
+  color: #53675f;
   border-color: #d9d9d9;
   padding: 0 10px;
   font-size: 14px;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  color: #1890ff;
-  border-color: #1890ff;
+  color: #25856a;
+  border-color: #25856a;
 }
 
 /* 示例区域 */
@@ -126,20 +129,20 @@
   background: white;
   font-size: 12px;
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  color: #595959;
+  color: #53675f;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
 
 .chip:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: #25856a;
+  color: #25856a;
 }
 
 .chip.active {
-  background: #1890ff;
-  border-color: #1890ff;
+  background: #25856a;
+  border-color: #25856a;
   color: white;
 }
 
