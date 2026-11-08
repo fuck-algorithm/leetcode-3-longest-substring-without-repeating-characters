@@ -145,7 +145,7 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await expect(page.locator('[data-node-id="char-0"][data-status="compare"]')).toBeVisible();
     await expect(page.locator('.layer-decorations [data-node-id="pointer-left"]')).toBeVisible();
     await expect(page.locator('.layer-decorations [data-node-id="pointer-right"]')).toBeVisible();
-    await expect(page.locator('.arrow-label').filter({ hasText: 'Check last time' })).toBeVisible();
+    await expect(page.locator('.arrow-label').filter({ hasText: 'Repeat?' })).toBeVisible();
     await expect(page.locator('[data-status="current"]')).toHaveCount(1);
     const repeatedExplanation = await narration.innerText();
     await page.getByTestId('next-step-btn').click();

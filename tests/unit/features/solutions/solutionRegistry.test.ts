@@ -25,7 +25,7 @@ describe('createSolutionRegistry', () => {
     const duplicate = solution.steps.find((step) => step.narration?.includes('候选字符 s[3]'))!;
     expect(duplicate.binding.variables).toMatchObject({ left: 0, right: 3, window: 'abc' });
     expect(duplicate.frame.nodes.some((node) => node.id === 'last-97' && node.label === 'a → 0')).toBe(true);
-    expect(duplicate.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Check last time'))).toBe(true);
+    expect(duplicate.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Repeat?'))).toBe(true);
     const shrink = solution.steps.find((step) => step.operation === 'move' && step.binding.variables.right === 3)!;
     expect(shrink.narration).toContain('left=max(0, 0+1)=1');
     expect(shrink.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Move left'))).toBe(true);

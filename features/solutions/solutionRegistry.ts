@@ -62,9 +62,10 @@ function createSteps(input: string): AlgorithmStep[] {
     const recentEntries = allMapEntries.filter(([char]) => char !== candidateChar).slice(-1);
     const mapEntries = showMap ? [...recentEntries, ...(candidateChar === undefined ? [] : [[candidateChar, candidateEntry?.[1] ?? candidate] as [string, number]])] : [];
     const mapChars = mapEntries.map(([char]) => char);
-    const tableStart = showMap ? 490 : 0;
-    const inputWidth = showMap ? 450 : 840;
-    const nodeX = (index: number) => (inputWidth - Math.max(displayIndices.length - 1, 0) * 62) / 2 + displayIndices.indexOf(index) * 62;
+    const tableStart = showMap ? 660 : 0;
+    const inputWidth = showMap ? 560 : 840;
+    const nodePitch = showMap ? 56 : 84;
+    const nodeX = (index: number) => (inputWidth - Math.max(displayIndices.length - 1, 0) * nodePitch) / 2 + displayIndices.indexOf(index) * nodePitch;
     const nodes = displayIndices.map((index) => {
       const label = chars[index];
       const inWindow = index >= windowStart && index <= windowEnd;
@@ -78,7 +79,7 @@ function createSteps(input: string): AlgorithmStep[] {
         : 'idle' as const;
       return {
         id: `char-${index}`, label, x: nodeX(index), y: 325,
-        radius: 25, badge: String(index), sublabel: `${index}`, status
+        radius: 25, badge: String(index), sublabel: String(index), status
       };
     });
     const byIndex = (index: number) => {
@@ -105,8 +106,8 @@ function createSteps(input: string): AlgorithmStep[] {
       ...pointers,
       ...flowArrows,
       ...(data.phase === 'inspect' && candidate !== null && previous !== null && positions.has(chars[candidate]) ? [{
-        id: `lookup-${steps.length}`, from: { x: byIndex(candidate), y: 290 }, to: positions.get(chars[candidate])!,
-        text: { 'zh-CN': '查上次位置', en: 'Check last time' }, kind: 'flow' as const, curve: 0, labelOffset: { x: 0, y: -8 }
+        id: `lookup-${steps.length}`, from: { x: byIndex(candidate), y: 305 }, to: positions.get(chars[candidate])!,
+        text: { 'zh-CN': '重复？', en: 'Repeat?' }, kind: 'flow' as const, curve: 0, labelOffset: { x: 32, y: -3 }
       }] : [])
     ];
     const effectiveWindow = windowStart <= windowEnd && chars.length ? chars.slice(windowStart, windowEnd + 1).join('') : '';
@@ -142,11 +143,11 @@ function createSteps(input: string): AlgorithmStep[] {
         annotationsEn: showMap && mapChars.length ? [{ id: 'map-title', text: 'Recent characters', x: tableStart, y: 530, kind: 'hint' }] : [],
         decorations: chars.length ? [
           ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: '左边界' }] : []),
-          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 480, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? '重复?' : '右边界' }] : [])
+          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 415, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? '重复?' : '当前' }] : [])
         ] : [],
         decorationsEn: chars.length ? [
           ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: 'left' }] : []),
-          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 480, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? 'repeat?' : 'right' }] : [])
+          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 415, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? 'repeat?' : 'current' }] : [])
         ] : [],
         notes: [{ 'zh-CN': notes, en: notesEn }], notesEn: [notesEn],
         nodes: chars.length ? allNodes : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],
