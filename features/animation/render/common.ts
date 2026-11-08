@@ -10,6 +10,7 @@ export type RenderTiming = {
   exitMs: number;
   arrowMs: number;
   reduced: boolean;
+  locale?: 'en' | 'zh-CN';
 };
 
 /**

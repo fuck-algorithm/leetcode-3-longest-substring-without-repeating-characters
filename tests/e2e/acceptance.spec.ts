@@ -128,12 +128,31 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await expect(page.locator('[data-testid="app-root"]')).toHaveAttribute('lang', 'zh-CN');
   });
 
-  test('E2E-006 代码、解说和焦点随步骤同步', async ({ page }) => {
+  test('E2E-006 代码、哈希查找、指针和解说同步推演重复字符', async ({ page }) => {
     await gotoHome(page);
-    const before = await page.getByTestId('step-narration').innerText();
-    await page.getByTestId('next-step-btn').click();
-    await expect(page.getByTestId('step-narration')).not.toHaveText(before);
+    const input = page.getByTestId('algo-input');
+    await input.fill('abcabcbb');
+    await input.evaluate((element: HTMLInputElement) => element.blur());
+    await expect(page.getByTestId('canvas-input-echo')).toContainText('abcabcbb');
+    const narration = page.getByTestId('step-narration');
+    const before = await narration.innerText();
+    for (let index = 0; index < 7; index += 1) await page.getByTestId('next-step-btn').click();
+    await expect(narration).not.toHaveText(before);
+    await expect(narration).toContainText('lastSeen');
+    await expect(narration).toContainText('lastSeen lookup returns 0');
+    await expect(page.locator('[data-node-id="last-0"]')).toBeVisible();
+    await expect(page.locator('[data-node-id="char-3"][data-status="compare"]')).toBeVisible();
+    await expect(page.locator('[data-node-id="char-0"][data-status="compare"]')).toBeVisible();
+    await expect(page.locator('.layer-decorations [data-node-id="pointer-left"]')).toBeVisible();
+    await expect(page.locator('.layer-decorations [data-node-id="pointer-right"]')).toBeVisible();
+    await expect(page.locator('.arrow-label').filter({ hasText: 'lastSeen' })).toBeVisible();
     await expect(page.locator('[data-status="current"]')).toHaveCount(1);
+    const repeatedExplanation = await narration.innerText();
+    await page.getByTestId('next-step-btn').click();
+    await expect(narration).not.toHaveText(repeatedExplanation);
+    await expect(narration).toContainText('left=max(0, 0+1)=1');
+    await expect(page.locator('.arrow-label').filter({ hasText: '0 → 1' })).toBeVisible();
+    await expect(page.getByTestId('variable-watch')).toContainText('left');
   });
 
   test('E2E-007 Left/Right/Space/R 快捷键有效', async ({ page }) => {
