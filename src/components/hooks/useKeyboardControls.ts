@@ -19,7 +19,6 @@ export function useKeyboardControls({
   isRunning,
   canGoBack,
   canGoForward,
-  isPlaying,
   onStepBack,
   onStepForward,
   onPlayPause,
@@ -52,7 +51,7 @@ export function useKeyboardControls({
   }, [
     isRunning, 
     canGoBack, 
-    canGoForward, 
+    canGoForward,
     onStepBack, 
     onStepForward, 
     onPlayPause, 

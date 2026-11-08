@@ -1,0 +1,81 @@
+# 质量门禁（发布前必过）
+
+## 最终判定模型（唯一口径）
+
+最终结论只允许两种状态：`PASS` 或 `FAIL`。
+
+必须按以下 Blocking Gate 判定：
+
+- B1：一票否决项为 0
+- B2：`npm run lint`、`npm run type-check`、`npm run build`、`npm run test:coverage`、`npm run test:e2e` 全部 exit code = 0
+- B3：Playwright 必过集合（全部 15 条 E2E）100% 通过
+- B4：`ACCEPTANCE_CHECKLIST.md` 中 AC-001~AC-024 全部 PASS（仅 AC-006 可在无多解法时标注 N/A；AC-023 动效证据见 `docs/ANIMATION_SPEC.md`，AC-024 证据见 `npm run qa:repo` 输出）
+- B5：P0/P1 缺陷数为 0
+- B6：Rubric 综合分 >= 80
+- B7：证据完整（命令输出、关键截图、缺陷闭环记录、`gh repo view` 元数据、双语界面与切换状态）
+
+判定规则：
+
+- B1-B7 全部满足：`PASS`
+- 任一 Gate 失败：`FAIL`
+
+AC-023 教学层证据需写入 `docs/ANIMATION_SPEC.md`；AC-024 元数据附 `gh repo view` 输出；AC-025 附双语文案与交互状态证据。
+
+## 一票否决
+
+任意一项命中，直接 `FAIL`：
+
+1. 页面出现紫色系主视觉
+2. 代码高亮与分镜步骤明显错位
+3. 进度条无法拖拽
+4. 快捷键（Left/Right/Space/R）失效
+5. lint/type-check/build 任一失败
+6. 单元测试或覆盖率阈值失败
+7. 交流群二维码缺失或构建后 404
+8. 画布每步整屏重建（`selectAll('*').remove()`）导致闪烁/跳变
+9. 缺少步骤操作徽标、解说或固定图例
+10. 空间分配失衡：1366×768 下画布卡片 <62% 视口高、SVG <50%，或顶部栏 >52px、页面外层存在 20px 以上无信息留白、控制栏堆成多行（E2E-001 实测）
+11. README 不是英文默认的双语版本，或 GitHub 仓库缺少英文描述 / 必需 Topics（AC-018、AC-024）
+
+## 强制命令
+
+发布前必须执行：
+
+```bash
+npm run qa:guard
+npm run lint
+npm run type-check
+npm run build
+npm run test:coverage
+npm run test:e2e
+npm run qa:repo
+```
+
+`npm run qa:repo` 需要已登录的 `gh` CLI（CI 使用 `GH_TOKEN`），用于校验 GitHub 仓库描述与 Topics（AC-024）。
+
+或统一执行：
+
+```bash
+npm run qa:full
+npm run qa:repo
+```
+
+`qa:full` 不包含依赖 GitHub 登录态的 `qa:repo`；最终 B1-B7 仍要求附上 `qa:repo` 的远端核验结果。
+
+`qa:repo` 用于验证 GitHub description/topics/homepage，需在 GitHub 仓库已创建且 `gh` 已登录（或配置 `GH_TOKEN`）后单独运行；它不包含在 `qa:full` 中。发布顺序为：创建并配置仓库元数据 → `npm run qa:repo` → `npm run qa:full` → 推送触发 Pages workflow。若 workflow 的 `GITHUB_TOKEN` 无法读取仓库元数据，须修正最小必要的仓库权限，不能将其记作应用构建失败。
+
+## 失败闭环（FAIL 后必须循环）
+
+若结论为 `FAIL`，必须执行以下循环，直到 `PASS`：
+
+1. 记录失败证据（命令输出、截图、trace、复现输入）
+2. 缺陷分级（P0/P1/P2/P3）
+3. 根因定位（实现缺陷 / 测试脚本缺陷 / 环境问题）
+4. 修复并回归（受影响集 + 核心冒烟）
+5. 更新验收报告（本轮失败项、修复动作、复测结果）
+6. 重新执行最终判定模型（B1-B7）
+
+补充规则：
+
+- flaky 用例最多重试 2 次；仍失败按真实缺陷处理
+- 禁止跳过失败 Gate 直接结束任务

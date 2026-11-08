@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import * as d3 from 'd3';
 import { AlgorithmState, AlgorithmStep } from './types';
 
@@ -11,745 +11,144 @@ interface AlgorithmVisualizationProps {
   totalSteps?: number;
 }
 
-const AlgorithmVisualization: React.FC<AlgorithmVisualizationProps> = ({
-  inputString,
-  currentState,
-  width = 800,
-  height = 300,
-  currentStateIndex = 0,
-  totalSteps = 1
-}) => {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const prevState = useRef<AlgorithmState | null>(null);
-
-  // 计算字符宽度和高度
-  const charWidth = Math.min(Math.max(20, (width * 0.8) / Math.max(1, inputString?.length || 1)), 50) * 1.2;
-  const charHeight = charWidth;
-  const startX = (width - (inputString?.length || 1) * charWidth) / 2;
-  const startY = 100;
-
-  // 确保当前窗口和字符集准确反映了输入字符串和指针位置
-  const sanitizedState = useMemo(() => {
-    if (!currentState) {
-      // 返回一个默认安全状态
-      return {
-        inputString: inputString || '',
-        leftPointer: 0,
-        rightPointer: 0,
-        currentWindow: '',
-        charSet: new Set<string>(),
-        maxLength: 0,
-        maxSubstring: '',
-        step: AlgorithmStep.INITIALIZE,
-        duplicateFound: false
-      };
-    }
-    
-    if (!inputString) {
-      // 如果没有输入字符串，保留当前状态但清空窗口和字符集
-      return {
-        ...currentState,
-        currentWindow: '',
-        charSet: new Set<string>(),
-        leftPointer: 0,
-        rightPointer: 0
-      };
-    }
-    
-    // 安全地获取指针位置
-    const leftPointer = Math.max(0, Math.min(currentState.leftPointer || 0, inputString.length - 1));
-    const rightPointer = Math.max(leftPointer, Math.min(currentState.rightPointer || 0, inputString.length - 1));
-    
-    // 始终从指针和输入字符串重新计算当前窗口
-    let currentWindow = '';
-    try {
-      if (leftPointer <= rightPointer && rightPointer < inputString.length) {
-        currentWindow = inputString.slice(leftPointer, rightPointer + 1);
-      }
-    } catch (e) {
-      console.error('Error creating currentWindow:', e);
-      currentWindow = '';
-    }
-
-    // 与其相信currentState.currentWindow，我们直接从计算的currentWindow获取
-    if (currentWindow !== currentState.currentWindow) {
-      console.warn('重新计算currentWindow:', 
-        `原始: "${currentState.currentWindow || ''}" -> 计算: "${currentWindow}"`);
-    }
-    
-    // 始终从当前窗口重建字符集
-    let charSet = new Set<string>();
-    try {
-      // 只在非初始化步骤时创建字符集
-      if (currentState.step !== AlgorithmStep.INITIALIZE) {
-        // 从当前窗口字符串构建字符集
-        for (const char of currentWindow) {
-          charSet.add(char);
-        }
-      }
-    } catch (e) {
-      console.error('Error creating charSet from currentWindow:', e);
-      charSet = new Set<string>();
-    }
-
-    // 检查是否与原始charSet一致
-    if (currentState.charSet instanceof Set) {
-      const originalCharSetSize = currentState.charSet.size;
-      const newCharSetSize = charSet.size;
-      if (originalCharSetSize !== newCharSetSize) {
-        console.warn('重建charSet与原始不同:', 
-          `原始大小: ${originalCharSetSize} -> 新大小: ${newCharSetSize}`);
-      }
-    }
-    
-    // 安全地获取最长子串
-    let maxSubstring = '';
-    if (typeof currentState.maxSubstring === 'string') {
-      maxSubstring = currentState.maxSubstring;
-    } else if (currentState.maxSubstring) {
-      try {
-        maxSubstring = String(currentState.maxSubstring);
-      } catch {
-        maxSubstring = '';
-      }
-    }
-    
-    // 确保最大长度有效
-    const maxLength = typeof currentState.maxLength === 'number' && !isNaN(currentState.maxLength) 
-      ? currentState.maxLength 
-      : maxSubstring.length;
-    
-    // 确保maxLength与maxSubstring长度一致
-    if (maxLength !== maxSubstring.length) {
-      console.warn('maxLength与maxSubstring长度不一致，调整:', maxLength, '->', maxSubstring.length);
-    }
-    
-    return {
-      ...currentState,
-      leftPointer,
-      rightPointer,
-      charSet,
-      currentWindow,
-      maxSubstring,
-      maxLength: maxSubstring.length // 始终使用字符串长度作为maxLength
-    };
-  }, [currentState, inputString, currentState?.leftPointer, currentState?.rightPointer, currentState?.maxSubstring, currentState?.maxLength]);
-
-  // 主要的渲染逻辑 - 每当输入或状态变化时更新SVG
-  useEffect(() => {
-    if (!svgRef.current || !inputString) return;
-    
-    console.log('更新SVG内容...');
-    
-    // 获取SVG元素
-    const svg = d3.select(svgRef.current);
-    
-    // 设置SVG属性
-    svg
-      .attr('width', width)
-      .attr('height', height)
-      .style('background-color', '#f0f0f0')
-      .style('border-radius', '8px');
-
-    // 清除旧内容 (只清除主要元素，而不是整个SVG)
-    svg.selectAll('.step-info, .char-group, .left-pointer, .right-pointer, .hashset-container, .answer-container').remove();
-    
-    // 渲染步骤信息
-    if (sanitizedState) {
-      // 直接调用渲染函数或传递props给组件
-      renderStepInfo(svg, {
-        step: sanitizedState.step,
-        width,
-        currentStep: currentStateIndex + 1,
-        totalSteps
-      });
-      
-      // 渲染字符显示
-      renderCharacterDisplay(svg, {
-        inputString,
-        currentState: sanitizedState,
-        startX,
-        startY,
-        charWidth,
-        charHeight
-      });
-      
-      // 渲染左指针
-      renderPointerDisplay(svg, {
-        pointerType: 'left',
-        currentPos: sanitizedState.leftPointer,
-        previousPos: prevState.current?.leftPointer || sanitizedState.leftPointer,
-        startX,
-        startY,
-        charWidth,
-        step: sanitizedState.step
-      });
-      
-      // 渲染右指针
-      renderPointerDisplay(svg, {
-        pointerType: 'right',
-        currentPos: sanitizedState.rightPointer,
-        previousPos: prevState.current?.rightPointer || sanitizedState.rightPointer,
-        startX,
-        startY,
-        charWidth,
-        step: sanitizedState.step
-      });
-      
-      // 渲染哈希集合显示
-      renderHashSetDisplay(svg, {
-        currentState: sanitizedState,
-        width,
-        height
-      });
-      
-      // 渲染答案显示
-      renderAnswerDisplay(svg, {
-        currentState: sanitizedState,
-        width,
-        height
-      });
-    }
-    
-  }, [sanitizedState, inputString, width, height, startX, startY, charWidth, charHeight, currentStateIndex, totalSteps]);
-
-  return (
-    <div className="algorithm-visualization">
-      <svg 
-        ref={svgRef} 
-        className="visualization-svg"
-        width={width}
-        height={height}
-      />
-    </div>
-  );
+type VisualNode = {
+  id: string; label: string; x: number; y: number; status: 'idle' | 'current' | 'compare' | 'visited' | 'done'; badge?: string;
 };
 
-// 渲染辅助函数
-function renderStepInfo(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>, props: any) {
-  const { step, width, currentStep, totalSteps } = props;
-  
-  // 清除先前的步骤信息
-  svg.selectAll('.step-info').remove();
-  svg.selectAll('.step-explanation').remove();
-  
-  // 构建步骤信息文本，包含步骤序号
-  const stepText = `当前步骤: ${AlgorithmStep[step]} (${currentStep}/${totalSteps})`;
-  
-  // 绘制步骤标题
-  svg.append('text')
-    .attr('class', 'step-info')
-    .attr('x', width / 2)
-    .attr('y', 25)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '28px')
-    .attr('font-weight', 'bold')
-    .attr('fill', '#333')
-    .text(stepText)
-    .style('opacity', 0)
-    .transition()
-    .duration(300)
-    .style('opacity', 1);
+const COLORS = {
+  idle: { fill: '#e8efec', stroke: '#9aada6', text: '#243b34' },
+  current: { fill: '#25856a', stroke: '#12674f', text: '#ffffff' },
+  compare: { fill: '#f0bd62', stroke: '#bb851f', text: '#382900' },
+  visited: { fill: '#b9d9ce', stroke: '#78a797', text: '#243b34' },
+  done: { fill: '#12674f', stroke: '#084e3b', text: '#ffffff' },
+};
+
+function describe(state: AlgorithmState): { operation: string; narration: string } {
+  switch (state.step) {
+    case AlgorithmStep.INITIALIZE:
+      return { operation: '初始化', narration: '建立空窗口与左右边界；接下来逐个读取字符，维持窗口内字符不重复。' };
+    case AlgorithmStep.DETECT_DUPLICATE:
+      return { operation: '发现重复', narration: `检查字符「${state.duplicateChar ?? ''}」时发现它已在窗口中；必须收缩左边界，才能恢复无重复条件。` };
+    case AlgorithmStep.MOVE_LEFT_POINTER:
+      return { operation: '收缩窗口', narration: `左边界移动到索引 ${state.leftPointer}，排除旧的「${state.duplicateChar ?? ''}」；右边界不回退，因此扫描保持线性。` };
+    case AlgorithmStep.UPDATE_RESULT:
+      return { operation: '更新答案', narration: `当前无重复窗口「${state.maxSubstring}」长度为 ${state.maxLength}，刷新已知最长结果。` };
+    default:
+      return { operation: '扩展窗口', narration: `读取索引 ${state.rightPointer} 的「${state.inputString[state.rightPointer] ?? ''}」，窗口扩展为「${state.currentWindow}」并继续检查唯一性。` };
+  }
 }
 
-function renderCharacterDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>, props: any) {
-  const { inputString, currentState, startX, startY, charWidth, charHeight } = props;
-  
-  // 实现字符显示逻辑
-  // 安全获取指针位置
-  const leftPointer = Math.max(0, Math.min(currentState.leftPointer || 0, inputString.length - 1));
-  const rightPointer = Math.max(leftPointer, Math.min(currentState.rightPointer || 0, inputString.length - 1));
-  const duplicateFound = currentState.duplicateFound || false;
-  const duplicateChar = currentState.duplicateChar || '';
-  
-  // 字符间距
-  const spacing = 10;
-  
-  // 绘制字符串背景
-  svg.selectAll('.char-background').remove();
-  svg.append('rect')
-    .attr('class', 'char-background')
-    .attr('x', startX - spacing/2)
-    .attr('y', startY - charHeight/2)
-    .attr('width', inputString.length * (charWidth + spacing) - spacing + spacing)
-    .attr('height', charHeight + 10)
-    .attr('rx', 8)
-    .attr('fill', '#f0f0f0')
-    .attr('opacity', 0.5);
-  
-  // 绘制字符
-  const charGroup = svg.selectAll('.char-group')
-    .data(inputString.split(''))
-    .enter()
-    .append('g')
-    .attr('class', 'char-group')
-    .attr('transform', (d, i) => `translate(${startX + i * (charWidth + spacing)}, ${startY})`)
-    .style('opacity', 0);
-    
-  // 添加背景矩形
-  charGroup.append('rect')
-    .attr('width', charWidth)
-    .attr('height', charHeight)
-    .attr('rx', 5)
-    .attr('ry', 5)
-    .attr('fill', (_d, i) => {
-      if (i >= leftPointer && i <= rightPointer) {
-        return '#e0f7fa';
-      }
-      return '#f5f5f5';
-    })
-    .attr('stroke', d => {
-      if (duplicateFound && d === duplicateChar) {
-        return '#f44336';
-      }
-      return '#ccc';
-    })
-    .attr('stroke-width', d => {
-      if (duplicateFound && d === duplicateChar) {
-        return 3;
-      }
-      return 1;
+const AlgorithmVisualization: React.FC<AlgorithmVisualizationProps> = ({
+  inputString, currentState, width = 800, height = 300, currentStateIndex = 0, totalSteps = 1,
+}) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const { operation, narration } = useMemo(() => describe(currentState), [currentState]);
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const duration = reduced ? 0 : 220;
+    svg.attr('viewBox', '0 0 1200 720').attr('preserveAspectRatio', 'xMidYMid meet');
+    let root = svg.select<SVGGElement>('.viz-root');
+    if (root.empty()) {
+      root = svg.append('g').attr('class', 'viz-root');
+      root.append('g').attr('class', 'layer-window');
+      root.append('g').attr('class', 'layer-nodes');
+      root.append('g').attr('class', 'layer-pointers');
+      root.append('g').attr('class', 'layer-support');
+      root.append('g').attr('class', 'layer-teaching');
+    }
+    root.selectAll('*').interrupt();
+
+    const chars = Array.from(inputString);
+    const pitch = Math.min(92, 960 / Math.max(chars.length, 1));
+    const cell = Math.min(68, pitch - 8);
+    const originX = (1200 - pitch * chars.length) / 2 + pitch / 2;
+    const state = currentState;
+    const nodes: VisualNode[] = chars.map((label, index) => {
+      const inWindow = index >= state.leftPointer && index <= state.rightPointer && state.currentWindow.length > 0;
+      const isAnswer = state.maxSubstring.length > 0 && index >= state.inputString.indexOf(state.maxSubstring) && index < state.inputString.indexOf(state.maxSubstring) + state.maxLength;
+      const status = state.step === AlgorithmStep.INITIALIZE ? 'idle' :
+        state.duplicateFound && index === state.rightPointer ? 'compare' :
+        index === state.rightPointer ? 'current' : inWindow ? 'visited' : isAnswer ? 'done' : 'idle';
+      return { id: `char-${index}`, label, x: originX + index * pitch, y: 230, status, badge: String(index) };
     });
-    
-  // 根据字符大小动态计算字体大小
-  const fontSize = Math.max(16, Math.min(charWidth * 0.5, 36));
-    
-  // 添加字符文本
-  charGroup.append('text')
-    .attr('x', charWidth / 2)
-    .attr('y', charHeight / 2 + fontSize/3)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', `${fontSize}px`)
-    .attr('font-weight', 'bold')
-    .attr('font-family', 'monospace')
-    .attr('fill', '#333')
-    .text(char => String(char));
-    
-  // 添加淡入动画
-  charGroup.transition()
-    .delay((_, i) => i * 50) // 连续展现动画效果
-    .duration(300)
-    .style('opacity', 1);
-    
-  // 绘制当前窗口指示器
-  svg.selectAll('.window-indicator').remove();
-  if (leftPointer <= rightPointer) {
-    const windowWidth = (rightPointer - leftPointer + 1) * (charWidth + spacing) - spacing;
-    svg.append('rect')
-      .attr('class', 'window-indicator')
-      .attr('x', startX + leftPointer * (charWidth + spacing))
-      .attr('y', startY + charHeight + 5)
-      .attr('width', windowWidth)
-      .attr('height', 3)
-      .attr('rx', 1.5)
-      .attr('fill', '#2196f3')
-      .style('opacity', 0)
-      .transition()
-      .delay(400)
-      .duration(400)
-      .style('opacity', 0.8);
-  }
-}
 
-function renderPointerDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>, props: any) {
-  const { pointerType, currentPos, previousPos, startX, startY, charWidth, step } = props;
-  
-  // 安全获取有效的指针位置
-  const validCurrentPos = Math.max(0, currentPos);
-  const validPreviousPos = Math.max(0, previousPos);
-  
-  // 设置指针基本属性
-  const className = `${pointerType}-pointer`;
-  const color = pointerType === 'left' ? '#4caf50' : '#2196f3';
-  const label = pointerType === 'left' ? '左' : '右';
-  const spacing = 10; // 字符间距
-  const y = pointerType === 'left' ? startY - 40 : startY - 20;
-  
-  // 移除先前的指针元素
-  svg.selectAll(`.${className}`).remove();
-  
-  // 计算指针位置，考虑字符间距
-  const getPointerX = (pos: number) => startX + pos * (charWidth + spacing) + charWidth / 2;
-  
-  // 创建指针组
-  const pointer = svg.append('g')
-    .attr('class', className)
-    .attr('transform', `translate(${getPointerX(validPreviousPos)}, ${y})`)
-    .style('opacity', 0);
-  
-  // 添加指针箭头
-  pointer.append('path')
-    .attr('d', 'M-8,0 L8,0 L0,15 Z')
-    .attr('fill', color);
-  
-  // 添加指针标签
-  pointer.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('y', -5)
-    .attr('font-size', '12px')
-    .attr('font-weight', 'bold')
-    .text(label);
-  
-  // 指针动画效果：淡入 + 移动
-  pointer
-    .transition()
-    .duration(300)
-    .style('opacity', 1)
-    .transition()
-    .duration(400)
-    .attr('transform', `translate(${getPointerX(validCurrentPos)}, ${y})`)
-    .on('end', () => {
-      // 对应步骤时添加额外的动画效果
-      const isRelevantStep = 
-        (pointerType === 'left' && step === AlgorithmStep.MOVE_LEFT_POINTER) ||
-        (pointerType === 'right' && step === AlgorithmStep.MOVE_RIGHT_POINTER);
-        
-      if (isRelevantStep) {
-        pointer
-          .transition()
-          .duration(300)
-          .attr('transform', `translate(${getPointerX(validCurrentPos)}, ${y - 5})`)
-          .transition()
-          .duration(300)
-          .attr('transform', `translate(${getPointerX(validCurrentPos)}, ${y})`);
-      }
-    });
-}
+    const windowLayer = root.select<SVGGElement>('.layer-window');
+    const windowVisible = state.currentWindow.length > 0 && state.rightPointer >= state.leftPointer;
+    windowLayer.selectAll<SVGRectElement, number>('rect.window-range').data(windowVisible ? [1] : []).join(
+      enter => enter.append('rect').attr('class', 'window-range').attr('rx', 14).attr('fill', '#e3f3ed').attr('stroke', '#8ebbaa').attr('stroke-dasharray', '5 4'),
+      update => update,
+      exit => exit.remove(),
+    ).transition('range').duration(duration)
+      .attr('x', originX + state.leftPointer * pitch - cell / 2 - 12)
+      .attr('y', 184).attr('width', Math.max(cell + 24, (state.rightPointer - state.leftPointer) * pitch + cell + 24)).attr('height', 100);
 
-function renderHashSetDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>, props: any) {
-  const { currentState, width, height } = props;
-  
-  // 组件ID用于调试和确保唯一性
-  const componentId = `hashset-${Math.random().toString(36).substring(2, 11)}`;
-  const containerId = `hashset-container-${componentId}`;
-  const titleId = `hashset-title-${componentId}`;
-  const cellClass = `hashset-cell-${componentId}`;
-  
-  // 清理所有与哈希集合相关的元素，包括可能存在的旧版本组件
-  // 使用更彻底的选择器确保清理完全
-  svg.selectAll('.hashset-container, .hashset-cell, .hashset-title, .hashset-empty, [id^="hashset-"]').remove();
-  
-  // 输入字符串和指针位置
-  const inputString = currentState.inputString || '';
-  const leftPointer = currentState.leftPointer || 0;
-  const rightPointer = currentState.rightPointer || 0;
-  
-  // 重建哈希集合 - 完全重写此部分逻辑
-  let hashSetData: string[] = [];
-  
-  // 检查是否是初始状态，如果是则不需要显示任何字符
-  if (currentState.step === AlgorithmStep.INITIALIZE) {
-    // 初始状态，哈希集合为空
-    hashSetData = [];
-  } else if (currentState.charSet && currentState.charSet instanceof Set) {
-    // 如果charSet是有效的Set，直接使用
-    hashSetData = Array.from(currentState.charSet).map(char => String(char));
-    console.log('使用状态中的charSet构建哈希集合:', hashSetData);
-  } else if (currentState.currentWindow && typeof currentState.currentWindow === 'string') {
-    // 使用currentWindow构建集合
-    const windowChars = currentState.currentWindow.split('');
-    hashSetData = [...new Set(windowChars)] as string[];
-    console.log('使用currentWindow构建哈希集合:', currentState.currentWindow, '->', hashSetData);
-  } else {
-    // 回退方法：从指针位置重建
-    const windowChars: string[] = [];
-    if (leftPointer <= rightPointer && rightPointer < inputString.length) {
-      for (let i = leftPointer; i <= rightPointer; i++) {
-        windowChars.push(inputString[i]);
-      }
-    }
-    hashSetData = [...new Set(windowChars)];
-    console.log('使用指针位置构建哈希集合:', leftPointer, rightPointer, '->', hashSetData);
-  }
-  
-  console.log('哈希集合最终数据:', {
-    currentWindow: currentState.currentWindow,
-    charSet: currentState.charSet instanceof Set ? Array.from(currentState.charSet) : [],
-    leftPointer,
-    rightPointer,
-    hashSetData
-  });
-  
-  // 设置网格布局
-  const cellSize = 40;
-  const cellSpacing = 5;
-  const leftAreaWidth = width * 0.45;
-  const setY = height - 110;
-  const setX = width * 0.05;
-  
-  // 计算每行最大字符数
-  const maxCharsPerRow = Math.max(1, Math.floor((leftAreaWidth - setX) / (cellSize + cellSpacing)));
-  
-  // 创建容器
-  const container = svg.append('g')
-    .attr('class', 'hashset-container')
-    .attr('id', containerId);
-  
-  // 添加标题
-  container.append('text')
-    .attr('class', 'hashset-title')
-    .attr('id', titleId)
-    .attr('x', setX + leftAreaWidth / 2)
-    .attr('y', setY - 20)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '14px')
-    .attr('fill', '#333')
-    .attr('font-weight', 'bold')
-    .text('当前滑动窗口字符哈希集合');
-  
-  // 如果没有字符，显示提示
-  if (hashSetData.length === 0) {
-    container.append('text')
-      .attr('class', 'hashset-empty')
-      .attr('id', `hashset-empty-${componentId}`)
-      .attr('x', setX + leftAreaWidth / 2)
-      .attr('y', setY + 30)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '14px')
-      .attr('fill', '#666')
-      .text('(空)');
-    return;
-  }
-  
-  // 创建字符元素
-  hashSetData.forEach((char: string, i: number) => {
-    const cellId = `${cellClass}-${i}`;
-    const row = Math.floor(i / maxCharsPerRow);
-    const col = i % maxCharsPerRow;
-    const x = setX + col * (cellSize + cellSpacing);
-    const y = setY + row * (cellSize + cellSpacing);
-    
-    // 创建组
-    const group = container.append('g')
-      .attr('class', 'hashset-cell')
-      .attr('id', cellId)
-      .attr('transform', `translate(${x}, ${y})`)
-      .style('opacity', 0);
-    
-    // 添加背景矩形
-    group.append('rect')
-      .attr('id', `${cellId}-rect`)
-      .attr('width', cellSize)
-      .attr('height', cellSize)
-      .attr('rx', 5)
-      .attr('ry', 5)
-      .attr('fill', '#e3f2fd')
-      .attr('stroke', '#90caf9')
-      .attr('stroke-width', 2);
-    
-    // 添加字符文本
-    group.append('text')
-      .attr('id', `${cellId}-text`)
-      .attr('x', cellSize / 2)
-      .attr('y', cellSize / 2 + 6)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '18px')
-      .attr('font-family', 'monospace')
-      .attr('font-weight', 'bold')
-      .text(String(char));
-    
-    // 添加淡入动画
-    group.transition()
-      .duration(300)
-      .style('opacity', 1);
-    
-    // 如果是重复字符，高亮显示
-    if (currentState.duplicateFound && char === currentState.duplicateChar) {
-      group.select('rect')
-        .attr('fill', '#ffcdd2')
-        .attr('stroke', '#ef9a9a')
-        .attr('stroke-width', 2);
-    }
-  });
-}
+    const groups = root.select<SVGGElement>('.layer-nodes').selectAll<SVGGElement, VisualNode>('g.char-node')
+      .data(nodes, d => d.id).join(
+        enter => {
+          const group = enter.append('g').attr('class', 'char-node').attr('data-node-id', d => d.id).attr('opacity', 0);
+          group.append('rect').attr('rx', 12);
+          group.append('text').attr('class', 'char-label').attr('text-anchor', 'middle').attr('dominant-baseline', 'central');
+          group.append('text').attr('class', 'index-label').attr('text-anchor', 'middle');
+          return group;
+        }, update => update, exit => exit.transition('exit').duration(duration).attr('opacity', 0).remove(),
+      );
+    groups.attr('data-status', d => d.status)
+      .transition('move').duration(duration).attr('opacity', 1).attr('transform', d => `translate(${d.x},${d.y})`);
+    groups.select('rect').attr('width', cell).attr('height', cell).attr('x', -cell / 2).attr('y', -cell / 2)
+      .attr('fill', d => COLORS[d.status].fill).attr('stroke', d => COLORS[d.status].stroke).attr('stroke-width', d => d.status === 'current' ? 3 : 1.5);
+    groups.select('.char-label').text(d => d.label).attr('fill', d => COLORS[d.status].text).attr('font-size', Math.min(28, cell * 0.42)).attr('font-weight', 700);
+    groups.select('.index-label').text(d => `[${d.badge}]`).attr('y', cell / 2 + 21).attr('fill', '#63776f').attr('font-size', 13);
 
-function renderAnswerDisplay(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>, props: any) {
-  const { currentState, width, height } = props;
-  
-  // 组件ID用于调试和确保唯一性
-  const componentId = `answer-${Math.random().toString(36).substring(2, 11)}`;
-  const containerId = `answer-container-${componentId}`;
-  const titleId = `answer-title-${componentId}`;
-  const cellClass = `answer-cell-${componentId}`;
-  
-  // 确保删除所有相关元素，包括可能存在的旧版本组件
-  svg.selectAll('.answer-container, .answer-char, .answer-title, .answer-empty, [id^="answer-"], [class^="answer-"]').remove();
-  
-  // 如果是初始状态，不显示任何结果
-  if (currentState.step === AlgorithmStep.INITIALIZE && currentState.maxLength === 0) {
-    // 创建容器
-    const container = svg.append('g')
-      .attr('class', 'answer-container')
-      .attr('id', containerId);
-      
-    // 添加标题
-    container.append('text')
-      .attr('class', 'answer-title')
-      .attr('id', titleId)
-      .attr('x', width * 0.75)
-      .attr('y', height - 130)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '14px')
-      .attr('font-weight', 'bold')
-      .attr('fill', '#333')
-      .text('最长无重复子串');
-    
-    container.append('text')
-      .attr('class', 'answer-empty')
-      .attr('id', `answer-empty-${componentId}`)
-      .attr('x', width * 0.75)
-      .attr('y', height - 100)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '14px')
-      .attr('fill', '#666')
-      .text('算法尚未启动');
-    
-    return;
-  }
-  
-  // 确保获取有效的最长子串和长度 - 重写此逻辑
-  let maxSubstring = '';
-  let maxLength = 0;
-  
-  if (typeof currentState.maxSubstring === 'string' && currentState.maxSubstring) {
-    maxSubstring = currentState.maxSubstring;
-    maxLength = currentState.maxLength || maxSubstring.length;
-  } else if (currentState.maxSubstring) {
-    try {
-      maxSubstring = String(currentState.maxSubstring);
-      maxLength = currentState.maxLength || maxSubstring.length;
-    } catch (e) {
-      console.error('无法转换maxSubstring为字符串:', e);
-      maxSubstring = '';
-      maxLength = 0;
-    }
-  } else {
-    // 如果没有最长子串，使用第一个字符作为默认值（针对全重复的情况）
-    if (currentState.inputString && currentState.inputString.length > 0) {
-      maxSubstring = currentState.inputString[0];
-      maxLength = 1;
-    }
-  }
-  
-  // 确保maxLength与maxSubstring长度一致
-  if (maxLength !== maxSubstring.length) {
-    console.warn('maxLength与maxSubstring长度不一致，强制同步:', maxLength, '->', maxSubstring.length);
-    maxLength = maxSubstring.length;
-  }
-  
-  console.log('答案数据:', { 
-    inputString: currentState.inputString,
-    maxSubstring, 
-    maxLength, 
-    type: typeof maxSubstring
-  });
-  
-  // 检查是否有非ASCII字符或无效字符
-  const validSubstring = maxSubstring.replace(/[^\x20-\x7E]/g, '');
-  if (validSubstring !== maxSubstring) {
-    console.warn('发现无效字符，已过滤:', maxSubstring, '->', validSubstring);
-    maxSubstring = validSubstring;
-  }
-  
-  // 将最长子串拆分为字符数组，确保每个字符都是有效的可显示字符
-  const answerData = maxSubstring.split('');
-  
-  // 验证数据
-  console.log('处理后的答案数据:', answerData);
-  
-  // 设置网格布局
-  const cellSize = 40;
-  const cellSpacing = 5;
-  const answerY = height - 110;
-  const answerX = width * 0.55;
-  const rightAreaWidth = width * 0.4;
-  
-  // 计算每行最大显示字符数
-  const maxCharsPerRow = Math.max(1, Math.floor(rightAreaWidth / (cellSize + cellSpacing)));
-  
-  // 创建容器
-  const container = svg.append('g')
-    .attr('class', 'answer-container')
-    .attr('id', containerId);
-    
-  // 添加标题
-  container.append('text')
-    .attr('class', 'answer-title')
-    .attr('id', titleId)
-    .attr('x', answerX + rightAreaWidth / 2)
-    .attr('y', answerY - 20)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '14px')
-    .attr('font-weight', 'bold')
-    .attr('fill', '#333')
-    .text('最长无重复子串 (长度: ' + maxLength + ')');
+    const pointers = [
+      { id: 'left', label: `left ${state.leftPointer}`, x: originX + state.leftPointer * pitch, y: 325 },
+      { id: 'right', label: `right ${state.rightPointer}`, x: originX + state.rightPointer * pitch, y: 360 },
+    ];
+    root.select<SVGGElement>('.layer-pointers').selectAll<SVGTextElement, typeof pointers[number]>('text.pointer')
+      .data(pointers, d => d.id).join('text').attr('class', 'pointer').attr('text-anchor', 'middle')
+      .attr('font-size', 14).attr('font-weight', 700).attr('fill', d => d.id === 'left' ? '#18765a' : '#b07a12')
+      .text(d => `▼ ${d.label}`).transition('pointer').duration(duration).attr('x', d => d.x).attr('y', d => d.y);
 
-  // 如果没有最长子串，显示提示信息
-  if (answerData.length === 0) {
-    container.append('text')
-      .attr('class', 'answer-empty')
-      .attr('id', `answer-empty-${componentId}`)
-      .attr('x', answerX + rightAreaWidth / 2)
-      .attr('y', answerY + 30)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '14px')
-      .attr('fill', '#666')
-      .text('暂无结果');
-    return;
-  }
+    const support = root.select<SVGGElement>('.layer-support');
+    const set = Array.from(state.charSet ?? []);
+    const supportItems = [
+      { id: 'set-title', x: 100, y: 455, size: 16, fill: '#53675f', text: '窗口字符集合' },
+      { id: 'set-detail', x: 100, y: 484, size: 13, fill: '#71837c', text: set.length ? '去重后仍需与窗口边界保持一致' : '当前为空：尚未纳入字符' },
+      ...set.map((text, index) => ({ id: `set-${text}`, x: 100 + index * 54, y: 535, size: 20, fill: '#12674f', text })),
+      { id: 'answer-title', x: 690, y: 455, size: 16, fill: '#53675f', text: '目前最长子串' },
+      { id: 'answer-detail', x: 690, y: 484, size: 13, fill: '#71837c', text: `长度 ${state.maxLength} · 窗口长度 ${state.currentWindow.length}` },
+      { id: 'answer-value', x: 690, y: 535, size: 24, fill: '#12674f', text: state.maxSubstring || '等待更新' },
+    ];
+    support.selectAll<SVGTextElement, typeof supportItems[number]>('text.support-item').data(supportItems, d => d.id).join('text')
+      .attr('class', 'support-item').attr('x', d => d.x).attr('y', d => d.y).attr('font-size', d => d.size)
+      .attr('font-weight', d => d.id === 'answer-value' || d.id.startsWith('set-') ? 700 : 400)
+      .attr('text-anchor', d => d.id.startsWith('set-') && d.id !== 'set-title' && d.id !== 'set-detail' ? 'middle' : 'start')
+      .attr('fill', d => d.fill).text(d => d.text);
 
-  // 创建字符元素
-  answerData.forEach((char: string, i: number) => {
-    const cellId = `${cellClass}-${i}`;
-    const row = Math.floor(i / maxCharsPerRow);
-    const col = i % maxCharsPerRow;
-    const x = answerX + col * (cellSize + cellSpacing);
-    const y = answerY + row * (cellSize + cellSpacing);
-    
-    // 创建组
-    const group = container.append('g')
-      .attr('class', 'answer-char')
-      .attr('id', cellId)
-      .attr('transform', `translate(${x}, ${y})`)
-      .style('opacity', 0);
-    
-    // 添加背景矩形
-    group.append('rect')
-      .attr('id', `${cellId}-rect`)
-      .attr('width', cellSize)
-      .attr('height', cellSize)
-      .attr('rx', 5)
-      .attr('ry', 5)
-      .attr('fill', '#e8f5e9')
-      .attr('stroke', '#81c784')
-      .attr('stroke-width', 2);
-    
-    // 添加字符文本
-    group.append('text')
-      .attr('id', `${cellId}-text`)
-      .attr('x', cellSize / 2)
-      .attr('y', cellSize / 2 + 6)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '18px')
-      .attr('font-family', 'monospace')
-      .attr('font-weight', 'bold')
-      .attr('fill', '#2e7d32')
-      .text(String(char));
-    
-    // 添加淡入动画
-    group.transition()
-      .duration(300)
-      .style('opacity', 1);
-  });
-  
-  // 动画效果 - 更新结果步骤时
-  if (currentState.step === 4) { // UPDATE_RESULT步骤
-    container.selectAll('.answer-char rect')
-      .attr('fill', '#c8e6c9')
-      .transition()
-      .duration(500)
-      .attr('fill', '#e8f5e9');
-  }
-}
+    const teaching = root.select<SVGGElement>('.layer-teaching');
+    const legend = [ ['current', '当前字符'], ['compare', '重复检查'], ['visited', '窗口内'], ['done', '最长结果'] ] as const;
+    const textItems = [
+      { id: 'step-title', x: 42, y: 44, fill: '#1e352d', size: 18, weight: 700, text: `滑动窗口 · 步骤 ${Math.min(currentStateIndex + 1, totalSteps)} / ${totalSteps}` },
+      { id: 'operation', x: 1078, y: 42, fill: '#12674f', size: 14, weight: 700, text: operation },
+      { id: 'narration', x: 42, y: 78, fill: '#41574f', size: 15, weight: 400, text: narration.length > 100 ? `${narration.slice(0, 97)}…` : narration },
+      { id: 'metrics', x: 720, y: 664, fill: '#53675f', size: 13, weight: 400, text: `当前窗口 ${state.currentWindow.length} · 已处理 ${Math.max(0, state.rightPointer + 1)} · 最长 ${state.maxLength}` },
+      ...legend.map(([key, text], i) => ({ id: `legend-${key}`, x: 61 + i * 155, y: 664, fill: '#53675f', size: 13, weight: 400, text })),
+    ];
+    teaching.selectAll<SVGTextElement, typeof textItems[number]>('text.teaching-item').data(textItems, d => d.id).join('text')
+      .attr('class', d => `teaching-item${d.id === 'narration' ? ' step-narration' : ''}`)
+      .attr('x', d => d.x).attr('y', d => d.y).attr('fill', d => d.fill).attr('font-size', d => d.size)
+      .attr('font-weight', d => d.weight).attr('text-anchor', d => d.id.startsWith('legend-') ? 'start' : d.id === 'operation' ? 'middle' : 'start')
+      .attr('data-operation', d => d.id === 'operation' ? operation : null).text(d => d.text);
+    teaching.selectAll<SVGRectElement, number>('rect.operation-badge').data([1]).join('rect')
+      .attr('class', 'operation-badge').attr('x', 1000).attr('y', 20).attr('width', 155).attr('height', 34).attr('rx', 17).attr('fill', '#dff1e9');
+    teaching.selectAll<SVGCircleElement, typeof legend[number]>('circle.legend-swatch').data(legend, d => d[0]).join('circle')
+      .attr('class', 'legend-swatch').attr('cx', (_d, i) => 48 + i * 155).attr('cy', 660).attr('r', 7)
+      .attr('fill', d => COLORS[d[0]].fill).attr('stroke', d => COLORS[d[0]].stroke);
+  }, [inputString, currentState, currentStateIndex, totalSteps, operation, narration, width, height]);
 
-export default AlgorithmVisualization; 
+  return <div className="algorithm-visualization"><svg ref={svgRef} className="visualization-svg" role="img" aria-label={`滑动窗口步骤 ${currentStateIndex + 1}：${narration}`} /></div>;
+};
+
+export default AlgorithmVisualization;

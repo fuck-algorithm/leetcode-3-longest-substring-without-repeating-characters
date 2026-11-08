@@ -77,7 +77,6 @@ const InputPanel: React.FC<InputPanelProps> = ({
         onStart();
       }, 10);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 仅在组件挂载时执行一次
 
   // 处理示例选择

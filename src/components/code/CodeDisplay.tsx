@@ -5,7 +5,6 @@ import {
   allSolutions, 
   stepToLinesMap,
   getSolution,
-  CodeSolution,
   CodeLine
 } from './codeSolutions';
 
@@ -150,8 +149,6 @@ const CodeDisplay: React.FC<CodeDisplayProps> = ({
     const leadingSpaces = code.length - trimmedCode.length;
     
     // 根据语言应用简单的语法高亮
-    const highlighted = trimmedCode;
-    
     // 关键字高亮
     const keywords: { [key: string]: string[] } = {
       java: ['class', 'public', 'private', 'int', 'char', 'void', 'return', 'if', 'else', 'while', 'for', 'new', 'this', 'null', 'true', 'false', 'boolean', 'String', 'Set', 'HashSet', 'import', 'package'],
@@ -200,7 +197,7 @@ const CodeDisplay: React.FC<CodeDisplayProps> = ({
     let key = 0;
     
     // 正则表达式匹配：字符串、关键字、数字
-    const tokenRegex = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\d+|[a-zA-Z_][a-zA-Z0-9_]*|[{}()\[\];,.=<>!&|+\-*/%])/g;
+    const tokenRegex = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\d+|[a-zA-Z_][a-zA-Z0-9_]*|[{}()[\];,.=<>!&|+\-*/%])/g;
     
     let lastIndex = 0;
     let match;
@@ -223,7 +220,7 @@ const CodeDisplay: React.FC<CodeDisplayProps> = ({
       } else if (/^\d+$/.test(token)) {
         // 数字
         parts.push(<span key={key++} className="token number">{token}</span>);
-      } else if (/^[{}()\[\];,.=<>!&|+\-*/%]$/.test(token)) {
+      } else if (/^[{}()[\];,.=<>!&|+\-*/%]$/.test(token)) {
         // 运算符/符号
         parts.push(<span key={key++} className="token operator">{token}</span>);
       } else {

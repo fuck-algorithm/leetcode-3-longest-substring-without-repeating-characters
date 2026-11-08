@@ -3,7 +3,7 @@ module.exports = {
     name: 'leetcode-3-visualizer',
     script: './node_modules/.bin/vite',
     args: '--port 32337 --host 127.0.0.1',
-    cwd: '/Users/cc11001100/github/fuck-algorithm/leetcode-3-longest-substring-without-repeating-characters',
+    cwd: __dirname,
     env: {
       NODE_ENV: 'development'
     },

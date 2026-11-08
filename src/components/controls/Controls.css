@@ -32,8 +32,8 @@
 }
 
 .control-buttons button:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: #25856a;
+  color: #25856a;
 }
 
 .control-buttons button:disabled {
