@@ -56,6 +56,10 @@ test.describe('Algorithm Visualization Acceptance', () => {
       await expect(page.getByTestId(id)).toBeVisible();
     }
 
+    await page.getByTestId('algo-input').fill('a'.repeat(200));
+    await page.getByTestId('algo-input').evaluate((element: HTMLInputElement) => element.blur());
+    await expect(page.getByTestId('canvas-input-echo')).toContainText('a'.repeat(40));
+
     const viewports = [
       { width: 1920, height: 1080, chrome: 0.22, canvas: 0.76, svg: 0.66, share: 0.7 },
       { width: 1366, height: 768, chrome: 0.26, canvas: 0.62, svg: 0.5, share: 0.68 }
@@ -86,6 +90,17 @@ test.describe('Algorithm Visualization Acceptance', () => {
       expect(layout.svg).toBeGreaterThanOrEqual(viewport.svg);
       expect(layout.share).toBeGreaterThanOrEqual(viewport.share);
       expect(layout.scroll).toBeLessThanOrEqual(viewport.height + 4);
+      const geometry = await page.evaluate(() => {
+        const svg = document.querySelector('[data-testid="canvas-svg"]')!;
+        const rect = svg.getBoundingClientRect();
+        const nodeBoxes = [...svg.querySelectorAll('.layer-nodes .canvas-node circle.node-core')].map((node) => node.getBoundingClientRect());
+        const labels = [...svg.querySelectorAll('.layer-labels .canvas-label rect.label-bg')].map((node) => node.getBoundingClientRect());
+        const inside = (box: DOMRect) => box.left >= rect.left - 1 && box.right <= rect.right + 1 && box.top >= rect.top - 1 && box.bottom <= rect.bottom + 1;
+        return { allNodesInside: nodeBoxes.every(inside), allLabelsInside: labels.every(inside), nodeCount: nodeBoxes.length };
+      });
+      expect(geometry.nodeCount).toBeLessThanOrEqual(11);
+      expect(geometry.allNodesInside).toBe(true);
+      expect(geometry.allLabelsInside).toBe(true);
     }
   });
 
@@ -103,7 +118,7 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await gotoHome(page);
     const input = page.getByTestId('algo-input');
     const before = await page.getByTestId('timeline-meta').innerText();
-    await input.fill('x'.repeat(50001));
+    await input.fill('x'.repeat(201));
     await input.press('Enter');
     await input.evaluate((element: HTMLInputElement) => element.blur());
     await expect(page.getByTestId('input-error')).toBeVisible();

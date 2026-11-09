@@ -7,7 +7,8 @@ import {
   prefersReducedMotion,
   resolveLegend
 } from '../../features/animation/motion';
-import { renderFrame } from '../../features/animation/render/renderFrame';
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../features/animation/layout';
+import { fitFrameToCanvas, renderFrame } from '../../features/animation/render/renderFrame';
 
 type Props = {
   locale: 'en' | 'zh-CN';
@@ -17,20 +18,16 @@ type Props = {
   speed?: number;
 };
 
-const WIDTH = 900;
-const HEIGHT = 720;
-const BASE_RATIO = WIDTH / HEIGHT;
-
+const WIDTH = CANVAS_WIDTH;
+const HEIGHT = CANVAS_HEIGHT;
 /**
  * 逻辑画布固定 1200×720；viewBox 按容器比例扩展，避免 preserveAspectRatio
  * 产生上下/左右黑边，把画布容器的空间真正交给绘图区。
  */
-function viewBoxFor(width: number, height: number): string {
-  if (!width || !height) {
-    return `0 0 ${WIDTH} ${HEIGHT}`;
-  }
+export function viewBoxFor(width: number, height: number): string {
+  if (!width || !height) return `0 0 ${WIDTH} ${HEIGHT}`;
   const ratio = width / height;
-  if (ratio >= BASE_RATIO) {
+  if (ratio >= WIDTH / HEIGHT) {
     const viewWidth = HEIGHT * ratio;
     return `${(WIDTH - viewWidth) / 2} 0 ${viewWidth} ${HEIGHT}`;
   }
@@ -48,6 +45,8 @@ const MARKERS = [
 export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const zoomLayerRef = useRef<SVGGElement | null>(null);
+  const userCameraRef = useRef(false);
+  const [cameraX, setCameraX] = useState(0);
   const [viewBox, setViewBox] = useState(`0 0 ${WIDTH} ${HEIGHT}`);
 
   const summary = useMemo(
@@ -69,7 +68,6 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
     : `第 ${step.id + 1} 步：${narration}${focusedNodes.length ? ` 当前焦点：${focusedNodes.map((node) => node.label).join('、')}。` : ''}${comparedNodes.length ? ` 正在比较：${comparedNodes.map((node) => node.label).join(' 与 ')}。` : ''}${completedNodes.length ? ` 已确认结果：${completedNodes.map((node) => node.label).join('、')}。` : ''}`;
   const localize = (value: string | { 'zh-CN': string; en: string }) => typeof value === 'string' ? value : value[locale];
   const notes = locale === 'en' ? step.frame.notesEn ?? [] : step.frame.notes;
-  const annotations = locale === 'en' ? step.frame.annotationsEn ?? step.frame.annotations ?? [] : step.frame.annotations ?? [];
   const t = (english: string, chinese: string) => locale === 'en' ? english : chinese;
 
   useEffect(() => {
@@ -96,6 +94,7 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
     const zoomLayer = d3.select(zoomLayerRef.current);
 
     const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.4, 2.5]).on('zoom', (event) => {
+      userCameraRef.current = true;
       zoomLayer.attr('transform', event.transform.toString());
     });
 
@@ -111,6 +110,19 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
       return;
     }
 
+    const fittedFrame = fitFrameToCanvas(locale === 'en'
+      ? { ...step.frame, nodes: step.frame.nodesEn ?? step.frame.nodes, decorations: step.frame.decorationsEn ?? step.frame.decorations, arrows: step.frame.arrowsEn ?? step.frame.arrows, labels: step.frame.labelsEn ?? step.frame.labels }
+      : step.frame);
+    if (!userCameraRef.current && typeof fittedFrame.cameraX === 'number') {
+      setCameraX(fittedFrame.cameraX);
+      if (Math.abs(cameraX - fittedFrame.cameraX) > 0.5) {
+        d3.select(svgRef.current).call(
+          d3.zoom<SVGSVGElement, unknown>().transform as never,
+          d3.zoomIdentity.translate(fittedFrame.cameraX, 0)
+        );
+      }
+    }
+
     renderFrame(
       d3.select(zoomLayerRef.current),
       step.frame,
@@ -118,7 +130,7 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
       prefersReducedMotion(),
       locale
     );
-  }, [step, speed, locale]);
+  }, [step, speed, locale, cameraX]);
 
   return (
     <div
@@ -176,14 +188,14 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
         </defs>
         <g ref={zoomLayerRef} className="zoom-layer">
           <rect className="canvas-backdrop" x={0} y={0} width={WIDTH} height={HEIGHT} />
-          <g className="layer-containers" />
-          <g className="layer-edges" />
-          <g className="layer-arrows" />
-          <g className="layer-decorations" />
-          <g className="layer-nodes" />
-          <g className="layer-labels" />
-          <g className="layer-annotations">
-            {annotations.map((annotation) => <text key={annotation.id} className="canvas-annotation" x={annotation.x} y={annotation.y}>{localize(annotation.text)}</text>)}
+          <g className="layout-fit-layer">
+            <g className="layer-containers" />
+            <g className="layer-edges" />
+            <g className="layer-arrows" />
+            <g className="layer-decorations" />
+            <g className="layer-nodes" />
+            <g className="layer-labels" />
+            <g className="layer-annotations" />
           </g>
         </g>
       </svg>

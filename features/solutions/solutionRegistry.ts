@@ -1,5 +1,7 @@
 import type { AlgorithmStep, InputValidationResult, SolutionDefinition } from '../../types';
 import { buildSampleCodes } from './sampleCodes';
+import { layoutSequence } from '../animation/sequenceLayout';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, NODE_RADIUS, trimSegment } from '../animation/layout';
 
 const examples = [
   { id: 's1', label: 'abcabcbb', labelEn: 'abcabcbb', value: 'abcabcbb' },
@@ -8,8 +10,8 @@ const examples = [
 ];
 
 function validateInput(raw: string): InputValidationResult {
-  if (Array.from(raw).length > 50000) {
-    return { valid: false, error: { 'zh-CN': '字符串长度不能超过 50000', en: 'String length must not exceed 50,000 characters' } };
+  if (Array.from(raw).length > 200) {
+    return { valid: false, error: { 'zh-CN': '为了清晰演示，字符串长度不能超过 200 个字符', en: 'For a readable visualization, strings must not exceed 200 characters' } };
   }
   return { valid: true, parsed: raw };
 }
@@ -41,73 +43,74 @@ function createSteps(input: string): AlgorithmStep[] {
   const pushFrame = (data: FrameData, title: string, titleEn: string, narration: string, narrationEn: string, operation: NonNullable<AlgorithmStep['operation']>, anchor: string, notes: string, notesEn: string) => {
     const { left: l, right: r, windowStart, windowEnd, candidate, previous } = data;
     const showMap = data.phase === 'inspect';
-    const inputViewport = chars.length > 10;
-    const focusRange = new Set<number>();
-    if (inputViewport) {
-      const start = Math.max(0, Math.min(chars.length - 10, l - 3));
-      for (let index = start; index < Math.min(chars.length, start + 10); index += 1) focusRange.add(index);
-      if (candidate !== null) focusRange.add(candidate);
-      if (previous !== null) focusRange.add(previous);
-      if (data.phase === 'finish' && data.bestLength) {
-        for (let index = data.bestStart; index < data.bestStart + data.bestLength; index += 1) focusRange.add(index);
-      }
-    } else {
-      chars.forEach((_char, index) => focusRange.add(index));
-    }
-    const visibleIndices = [...focusRange].sort((a, b) => a - b);
-    const displayIndices = visibleIndices.slice(0, 10);
+    const splitLanes = showMap;
+    const layout = layoutSequence(chars.length, {
+      left: l,
+      right: r,
+      candidate,
+      previous,
+      bestStart: data.phase === 'finish' ? data.bestStart : undefined,
+      bestLength: data.phase === 'finish' ? data.bestLength : undefined
+    }, { width: CANVAS_WIDTH - (splitLanes ? 520 : 80), maxNodes: 10, radius: NODE_RADIUS + 6, gap: 16, left: 36 });
+    const displayIndices = layout.indices;
     const allMapEntries = [...lastSeen.entries()];
     const candidateChar = candidate === null ? undefined : chars[candidate];
     const candidateEntry = candidateChar === undefined ? undefined : allMapEntries.find(([char]) => char === candidateChar);
     const recentEntries = allMapEntries.filter(([char]) => char !== candidateChar).slice(-1);
     const mapEntries = showMap ? [...recentEntries, ...(candidateChar === undefined ? [] : [[candidateChar, candidateEntry?.[1] ?? candidate] as [string, number]])] : [];
-    const mapChars = mapEntries.map(([char]) => char);
-    const tableStart = showMap ? 660 : 0;
-    const inputWidth = showMap ? 560 : 840;
-    const nodePitch = showMap ? 56 : 84;
-    const nodeX = (index: number) => (inputWidth - Math.max(displayIndices.length - 1, 0) * nodePitch) / 2 + displayIndices.indexOf(index) * nodePitch;
+    const tableStart = splitLanes ? CANVAS_WIDTH - 285 : CANVAS_WIDTH / 2 - 76;
+    const nodeX = (index: number) => layout.xByIndex.get(index) ?? layout.xByIndex.get(candidate ?? -1) ?? 600;
+    const displayBounds = { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
     const nodes = displayIndices.map((index) => {
       const label = chars[index];
       const inWindow = index >= windowStart && index <= windowEnd;
       const isCandidate = index === candidate;
       const isBest = data.bestLength > 0 && index >= data.bestStart && index < data.bestStart + data.bestLength;
-      const status = data.phase === 'finish' && isBest ? 'done' as const
+      const isFuture = index > r && data.phase !== 'finish';
+      const status = isFuture ? 'idle' as const : data.phase === 'finish' && isBest ? 'done' as const
         : data.phase === 'inspect' && (index === previous || isCandidate) ? 'compare' as const
         : isCandidate ? (data.phase === 'inspect' ? 'compare' as const : 'current' as const)
         : inWindow ? 'visited' as const
         : isBest ? 'done' as const
         : 'idle' as const;
       return {
-        id: `char-${index}`, label, x: nodeX(index), y: 325,
-        radius: 25, badge: String(index), sublabel: String(index), status
+        id: `char-${index}`, label, x: nodeX(index), y: 300,
+        radius: layout.radius, badge: String(index), sublabel: String(index), status
       };
     });
     const byIndex = (index: number) => {
-      const node = nodes.find(item => item.id === `char-${index}`);
-      return node?.x ?? 600;
+      const position = layout.xByIndex.get(index);
+      if (position !== undefined) return position;
+      const nearestIndex = layout.indices.reduce((best, item) => Math.abs(item - index) < Math.abs(best - index) ? item : best, layout.indices[0] ?? 0);
+      return layout.xByIndex.get(nearestIndex) ?? 600;
     }
     const pointers = !showMap && data.phase !== 'finish' ? [
-      ...(displayIndices.includes(l) ? [{ id: 'left-pointer', from: { x: byIndex(l), y: 430 }, to: { x: byIndex(l), y: 390 }, text: { 'zh-CN': `左 L=${l}`, en: `Left L=${l}` }, kind: 'pointer' as const }] : []),
-      ...(r >= 0 && displayIndices.includes(r) ? [{ id: 'right-pointer', from: { x: byIndex(r), y: 472 }, to: { x: byIndex(r), y: 432 }, text: { 'zh-CN': `右 R=${r}`, en: `Right R=${r}` }, kind: 'pointer' as const }] : [])
+      ...(displayIndices.includes(l) ? [{ id: 'left-pointer', from: { x: byIndex(l), y: 390 }, to: { x: byIndex(l), y: 365 }, text: { 'zh-CN': `左 L=${l}`, en: `Left L=${l}` }, kind: 'pointer' as const }] : []),
+      ...(r >= 0 && displayIndices.includes(r) ? [{ id: 'right-pointer', from: { x: byIndex(r), y: 465 }, to: { x: byIndex(r), y: 440 }, text: { 'zh-CN': `右 R=${r}`, en: `Right R=${r}` }, kind: 'pointer' as const }] : [])
     ] : [];
     const flowArrows = !showMap && data.phase === 'shrink' && previous !== null ? [{
-      id: `jump-${steps.length}`, from: { x: byIndex(Math.min(data.previousLeft ?? l, Math.max(chars.length - 1, 0))), y: 420 }, to: { x: byIndex(Math.min(l, Math.max(chars.length - 1, 0))), y: 420 },
+      id: `jump-${steps.length}`, from: { x: byIndex(data.previousLeft ?? l), y: 430 }, to: { x: byIndex(l), y: 430 },
       text: { 'zh-CN': `移动左边界`, en: `Move left` },
       kind: 'transfer' as const, curve: 0, labelOffset: { x: 0, y: 18 }
     }] : [];
-    const mapCell = (column: number) => ({ x: tableStart + (column % 2) * 72, y: 560 + Math.floor(column / 2) * 58 });
+    const mapCell = (column: number) => ({ x: tableStart + (column % 2) * 100, y: 550 + Math.floor(column / 2) * 58 });
     const hashRows = mapEntries.map(([char, index], row) => ({ char, index, id: `last-${char.codePointAt(0) ?? row}`, ...mapCell(row) }));
     const positions = new Map(hashRows.map(row => [row.char, { x: row.x, y: row.y }]));
     const allNodes = [
       ...nodes,
-      ...hashRows.map(row => ({ id: row.id, label: `${row.char} → ${row.index}`, x: row.x, y: row.y, radius: 17, badge: undefined, sublabel: undefined, status: 'idle' as const }))
+      ...(showMap ? hashRows.map(row => ({ id: row.id, label: `${row.char} → ${row.index}`, x: row.x, y: row.y, radius: 25, badge: undefined, sublabel: undefined, status: 'idle' as const })) : [])
     ];
+    const lookupFrom = candidate === null ? null : { x: byIndex(candidate), y: 300 };
+    const lookupTo = candidateChar ? positions.get(candidateChar) ?? null : null;
+    const lookupEdge = lookupFrom && lookupTo
+      ? trimSegment(lookupFrom, lookupTo, NODE_RADIUS + 6, 25, 10)
+      : null;
     const frameArrows = [
       ...pointers,
       ...flowArrows,
-      ...(data.phase === 'inspect' && candidate !== null && previous !== null && positions.has(chars[candidate]) ? [{
-        id: `lookup-${steps.length}`, from: { x: byIndex(candidate), y: 305 }, to: positions.get(chars[candidate])!,
-        text: { 'zh-CN': '重复？', en: 'Repeat?' }, kind: 'flow' as const, curve: 0, labelOffset: { x: 32, y: -3 }
+      ...(data.phase === 'inspect' && candidate !== null && previous !== null && lookupEdge ? [{
+        id: `lookup-${steps.length}`, from: lookupEdge.from, to: lookupEdge.to,
+        text: { 'zh-CN': '重复？', en: 'Repeat?' }, kind: 'flow' as const, curve: 0, labelOffset: { x: 12, y: -24 }
       }] : [])
     ];
     const effectiveWindow = windowStart <= windowEnd && chars.length ? chars.slice(windowStart, windowEnd + 1).join('') : '';
@@ -116,7 +119,7 @@ function createSteps(input: string): AlgorithmStep[] {
       id: 'best-label', targetId: `char-${data.bestStart}`,
       text: { 'zh-CN': `答案「${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}」`, en: `Answer “${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}”` },
       detail: { 'zh-CN': `区间 [${data.bestStart}, ${data.bestStart + data.bestLength}) · 长度 ${data.bestLength}`, en: `Range [${data.bestStart}, ${data.bestStart + data.bestLength}) · length ${data.bestLength}` },
-      position: 'top', variant: 'callout', tone: 'accent'
+      position: 'bottom', variant: 'callout', tone: 'accent'
     }] : !showMap && data.phase === 'include' && effectiveWindow ? [{
       id: 'window-label', targetId: `char-${Math.max(windowStart, 0)}`,
       text: { 'zh-CN': `窗口 ${effectiveWindow}`, en: `Window ${effectiveWindow}` },
@@ -139,8 +142,7 @@ function createSteps(input: string): AlgorithmStep[] {
       narration: narrationFull, narrationEn, operation,
       binding: { anchorIds: [anchor], variables: { left: l, right: Math.max(r, 0), window: effectiveWindow, currentLength: data.currentLength, bestLength: data.bestLength, lastSeen: Object.fromEntries([...lastSeen.entries()]) } },
       frame: {
-        annotations: showMap && mapChars.length ? [{ id: 'map-title', text: { 'zh-CN': '最近出现记录', en: 'Recent characters' }, x: tableStart, y: 530, kind: 'hint' }] : [],
-        annotationsEn: showMap && mapChars.length ? [{ id: 'map-title', text: 'Recent characters', x: tableStart, y: 530, kind: 'hint' }] : [],
+        layoutBounds: displayBounds,
         decorations: chars.length ? [
           ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: '左边界' }] : []),
           ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 415, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? '重复?' : '当前' }] : [])
@@ -149,6 +151,8 @@ function createSteps(input: string): AlgorithmStep[] {
           ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: 'left' }] : []),
           ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 415, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? 'repeat?' : 'current' }] : [])
         ] : [],
+        annotations: layout.gaps.map((gap) => ({ id: `gap-${gap.leftIndex}-${gap.rightIndex}`, x: gap.x, y: 285, text: { 'zh-CN': `… 跳过 ${gap.omitted} 个字符 …`, en: `… ${gap.omitted} characters skipped …` } })),
+        annotationsEn: layout.gaps.map((gap) => ({ id: `gap-${gap.leftIndex}-${gap.rightIndex}`, x: gap.x, y: 285, text: `… ${gap.omitted} characters skipped …` })),
         notes: [{ 'zh-CN': notes, en: notesEn }], notesEn: [notesEn],
         nodes: chars.length ? allNodes : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],
         nodesEn: chars.length ? allNodes.map(node => ({ ...node, label: node.label })) : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],

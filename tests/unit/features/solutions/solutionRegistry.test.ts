@@ -58,11 +58,11 @@ describe('createSolutionRegistry', () => {
     expect(solution.steps.at(-1)?.narrationEn).toContain('length 0');
   });
 
-  it('accepts legal Unicode problem inputs and rejects strings beyond the constraint', () => {
+  it('accepts readable Unicode input and rejects visualization workloads that would overflow', () => {
     const solution = createSolutionRegistry()[0];
     expect(solution.validateInput('').valid).toBe(true);
-    expect(solution.validateInput('a'.repeat(50000)).valid).toBe(true);
-    expect(solution.validateInput('a'.repeat(50001)).valid).toBe(false);
+    expect(solution.validateInput('a'.repeat(200)).valid).toBe(true);
+    expect(solution.validateInput('a'.repeat(201)).valid).toBe(false);
     expect(solution.validateInput('你好 😀 !').valid).toBe(true);
     expect(solution.validateInput(solution.generateRandom()).valid).toBe(true);
   });

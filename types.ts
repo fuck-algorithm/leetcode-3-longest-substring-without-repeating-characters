@@ -155,6 +155,9 @@ export interface CanvasAnnotation {
 }
 
 export interface CanvasFrame {
+  /** Invisible/non-interactive coordinate bounds reserve viewport space for data structures. */
+  layoutBounds?: { x: number; y: number; width: number; height: number };
+  cameraX?: number;
   annotations?: CanvasAnnotation[];
   annotationsEn?: CanvasAnnotation[];
   /** Non-data glyphs such as explicit left/right boundary arrows. */

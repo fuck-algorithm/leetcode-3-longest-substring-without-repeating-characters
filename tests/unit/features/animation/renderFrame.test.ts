@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CanvasFrame, CanvasNode } from '../../../../types';
 import { arrowLabelPoint, arrowPath } from '../../../../features/animation/render/arrows';
-import { renderFrame } from '../../../../features/animation/render/renderFrame';
+import { fitFrameToCanvas, renderFrame } from '../../../../features/animation/render/renderFrame';
 
 function node(id: string, overrides: Partial<CanvasNode> = {}): CanvasNode {
   return { id, label: id, x: 100, y: 100, ...overrides };
@@ -32,6 +32,19 @@ beforeEach(() => {
 });
 
 describe('renderFrame', () => {
+  it('fits an off-canvas frame into the shared logical canvas and transforms linked glyphs together', () => {
+    const original = frame({
+      nodes: [node('n0', { x: -500, y: 20, radius: 70 }), node('n1', { x: 1450, y: 760, radius: 42 })],
+      decorations: [node('pointer', { x: 1550, y: 790, radius: 18 })],
+      arrows: [{ id: 'dataflow', from: { x: -500, y: 20 }, to: { x: 1450, y: 760 }, text: 'flow' }]
+    });
+    const fitted = fitFrameToCanvas(original);
+    expect(fitted.nodes.every((item) => item.x - (item.radius ?? 0) >= 0 && item.x + (item.radius ?? 0) <= 1200 && item.y - (item.radius ?? 0) >= 0 && item.y + (item.radius ?? 0) <= 720)).toBe(true);
+    expect(fitted.decorations?.every((item) => item.x - (item.radius ?? 0) >= 0 && item.x + (item.radius ?? 0) <= 1200 && item.y - (item.radius ?? 0) >= 0 && item.y + (item.radius ?? 0) <= 720)).toBe(true);
+    expect(fitted.arrows[0].from).toEqual({ x: fitted.nodes[0].x, y: fitted.nodes[0].y });
+    expect(fitted.arrows[0].to).toEqual({ x: fitted.nodes[1].x, y: fitted.nodes[1].y });
+  });
+
   it('按状态渲染节点并保留语义类名', () => {
     const layer = setup();
     renderFrame(

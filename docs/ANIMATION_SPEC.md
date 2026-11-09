@@ -1,69 +1,42 @@
 # LeetCode 3 动画规格说明（ANIMATION_SPEC）
 
-> 对应 AC-023；本规格先于动画实现制定。最终 PASS 仍需满足 AC-001～AC-025（含 AC-024）及 B1-B7。
+> 对应 AC-023；本规格先于动画实现制定。最终 PASS 仍需满足 AC-001～AC-025 与 B1-B7。
 
-## 1. 观察状态与布局
-- 主结构：输入字符串的 Unicode code point 数组，稳定节点 ID `char-{index}`。
-- 辅助结构：字符最近出现位置的哈希表逻辑（索引标记）及最长子串快照。
-- 标量：left/right、当前窗口、最长长度；每帧变量快照绑定代码 anchor。
-- 单帧最多一个 `current`，重复比较最多两个 `compare`。
-- 初始题解步骤示例输入 `abcabcbb` 共 25 个语义帧，输入提交后按原始输入重算快照。
+## 1. 数据、坐标与稳定 ID
+- 全局 SVG 使用 `CANVAS_WIDTH × CANVAS_HEIGHT = 1200 × 720`，viewBox 根据容器比例扩展；动画布局与 `features/animation/layout.ts` 的标签安全区共享同一尺寸来源。
+- 每个字符语义 ID 为 `char-{index}`，数组沿 X 轴等距排布；所有数据坐标由 `features/animation/sequenceLayout.ts` 基于统一画布宽度、节点半径和最小间距计算。长度超过可视窗口时按 `left/right/candidate/previous/bestRange` 选取上下文，关键索引在窗口之外也作为强制锚点保留。
+- SVG viewBox 基准与 `features/animation/layout.ts` 的 1200×720 常量保持一致；外层视口仅通过 viewBox 等比扩展，无需每步挪动元素。
+- 单帧布局检测所有节点、装饰指针及容器的包围盒；超出安全区时以统一 scale/translate 同步变换节点、装饰、箭头、标签引导线、标注与容器。步骤间保留相机平移/缩放，且不因为局部布局再次重算而跳镜头。
+- 退场采用统一 `fadeOutAndRemove`，所有数据层使用 keyed join。
 
-## 2. 分镜
-| operation | 焦点 | 状态/数据变化 | narration 要点 | anchor |
-| --- | --- | --- | --- | --- |
-| init | 无 | 建立空窗 | 为什么 left 从 0 开始且单向移动 | init |
-| compare | 重复字符与旧位置 | 标记冲突 | 因重复位置仍在窗内，左边界必须越过旧位置 | duplicate |
-| move | 左边界 | 左边界右移、被排除字符留 visited | 哈希记录允许直接跳过已证无效范围 | shrink |
-| read | 当前右端字符 | 扩展窗口 | 添加字符后窗口唯一，长度可计算 | read |
-| match | 当前窗口 | 最长结果变更并保持 done | 只有长度严格变大才覆盖最佳结果 | update-best |
-| done | 最终答案 | 最终子串保持 done | 扫描完成并给出长度 | return |
+本实现遵循 AC-024 的仓库元数据要求。
 
-每个步骤是不可变快照；重复步骤 narration 中包含具体对象、原因/结果，相邻步骤不同。代码有 Java/Python/Go/JavaScript anchor 对照。
+## 2. 数据流与语义步骤
 
-## 3. 坐标与结构
-- 逻辑 viewBox 1200×720；数组沿 x 轴固定等距，坐标公式 `x = 80 + index * 1040 / max(n-1, 1)`，y=350。
-- 所有输入节点全部落在画布范围内；同一输入内每帧 ID 和坐标保持稳定。
-- 窗口标注通过 `placeLabels` 测量/避让，窗口节点被明确标识；最终最长子串用 done 状态。
-- SVG 基于容器比例动态扩展 viewBox，不留空黑边；D3 按 ID keyed join，分层为 containers/edges/arrows/nodes/labels。
-- D3 zoom 支持缩放与平移；用户操作镜头后步骤不重置 transform。
+**运动语法：** 动效统一从 `features/animation/motion.ts` 读取 token，退场由统一清理器执行。
 
-## 4. 运动与状态
+**稳定布局：** 字符、答案和指针的身份/逻辑索引在相邻步骤间保持一致。
 
-本项目采用 **运动语法**：`MOTION` token 控制 enter/update/exit/arrow 时长，倍速、暂停节拍和 reduced-motion 统一处理。步骤节点使用稳定 ID 和坐标实现 **稳定布局**；每帧先 interrupt 命名转场，退场由 `fadeOutAndRemove` 清理。
+**状态图例：** current / compare / visited / done 固定顺序显示，颜色不是唯一信号。
 
-## 状态图例与教学层
-固定 **状态图例** 为 current / compare / visited / done，配合索引徽标与节点边框作为非颜色冗余编码。画布始终展示 **操作徽标**、步骤解说、图例及三个指标。
+**操作徽标：** 每帧显示 `operation` 和一条解释动作与原因的解说。
 
-## 辅助结构容器
-本题不使用栈/队列，因此无需 **辅助结构容器**；保留模板容器层以便未来数据结构复用。
+**辅助结构容器：** 本题不使用栈或队列；哈希映射以小型最近位置卡片作为题目需要的辅助数据结构展示。
 
-## 箭头与标注规范
-当前边界迁移箭头包含动作 + 对象文本；窗口标注提供主行和 detail 第二行，通过 placeLabels 自动避让。此即 **箭头与标注规范**。
+**箭头与标注规范：** 箭头动作标签靠近变化对象，节点与 label 位置由统一坐标系统推导。
 
-## 画布优先与无障碍
-按 **画布优先** 空间预算验收：1366×768 chrome ≤26%、画布卡片 ≥62%、SVG ≥50%；1920×1080 分别 ≤22%、≥76%、≥66%。必须响应 **prefers-reduced-motion**，且零动效时仍完整更新语义信息。
-- `MOTION` tokens 控制 enter/update/exit/arrow 时长；倍速、暂停节拍和 reduced-motion 统一处理。
-- 转场前按命名 transition interrupt；退场由 `fadeOutAndRemove` 清理。
-- 状态色固定 current/compare/visited/done；索引徽标、节点边框与固定文字图例作为非颜色冗余编码。
-- 常驻 operation badge、step narration、固定 legend 和三个来自快照的 metrics。
-- reduced-motion 下 D3 JS 时长为 0、CSS 动画关闭，语义状态/解说/图例/代码绑定继续更新。
+**prefers-reduced-motion：** 禁用 JS/CSS 动效但保持状态和说明信息。
 
-## 教学可读性专项（2026-11-09）
+**画布优先：** 1366×768 与 1920×1080 按质量门禁空间预算实测。- 算法快照依次呈现：候选字符 → `lastSeen` 查询 → 若旧位置仍在窗口则左边界右移 → 纳入窗口 → 更新/保留最长结果。
+- 重复比较箭头、边界跳转箭头、哈希映射箭头和答案区间分别绑定语义快照；箭头端点与节点/哈希记录使用同一帧坐标变换。
+- 画布必须保持固定 `current/compare/visited/done` 状态色板、图例、操作标记、步骤解说和 2–3 个快照指标。
 
-- 每次循环拆为查表/重复判断、必要的边界移动、字符纳入窗口、更新 `lastSeen` / 最长答案的独立快照；解说展示具体索引、字符、窗口区间、`left=max(left, previous+1)` 推演与当前/最佳长度。
-- 画面绘制 last-seen 哈希记录卡、L/R 指针装饰节点；专门用有标注的箭头表达“候选字符→哈希查找”“left 旧位置→新位置”“字符加入窗口”“最长区间被记录”。
-- `abcabcbb` 最终突出 `[0,3) = abc`；`pwwkew` 检查旧 w 位置 2 及窗口外旧重复不移动 left；`bbbbb` 展示最佳长度保持 1；空输入显示空锚点与答案 0。
-- E2E-006 断言索引 3 的重复节点、旧字符节点、lastSeen 记录、双指针、查表箭头和下一步边界转移的一致性。
+## 3. 坐标回归用例
+- `tests/unit/features/animation/sequenceLayout.test.ts` 覆盖空串、短数组、长数组、关键索引保留、答案区间保留和可视边界。
+- `tests/unit/features/animation/coordinateIntegrity.test.ts` 覆盖节点、指针、箭头的一致坐标变换。
+- Playwright E2E-001 同时在 1366×768 与 1920×1080 检查空间预算、无纵向滚动及核心 SVG glyph 不越界；输入覆盖到题目允许的可视化上限。
+- 长字符串可视化限制为 200 个 Unicode 字符，超过限制由输入校验明确拒绝，避免生成不受控的大型分镜/文本和坐标溢出。
+- 两档浏览器实测：8 / 6 / 200 字符输入，在 1366×768 与 1920×1080 下，所有节点圆形包围盒均在 SVG 绘图区内、无横竖滚动；200 字符只显示 10 个相邻上下文节点，仍显示当前位置与右指针。坐标矩阵测试另覆盖每帧最多 11 节点、最小间距与两条泳道不相交。
 
-## 5. 1x/3x/跳步/reduced-motion 实测记录
-- 1x 完整播放：须逐帧确认 narration 与窗口、焦点、代码行一致。
-- 3x 快速播放：须观察命名 transition 不排队、不会闪回。
-- 随机跳步 10 次：节点稳定、operation/narration 与目标快照一致。
-- reduced-motion 截图：状态、代码高亮、图例、指标仍完整更新且 JS 时长为 0。
-- 上述项目在最终发布前须用真实浏览器执行并记录结果，不能只用静态审阅代替。
-
-## 6. 证据计划及当前结果
-- 已有组件化动画实现，单测覆盖步骤语义、稳定节点 ID、图例/时长、标签布局、渲染及快速退场清理。
-- 必须实测：1366×768 与 1920×1080 空间预算；1x/3x 播放；随机跳步 10 次；语言切换；reduced-motion；实际画布平移/缩放。
-- 证据路径：`test-results/`（Playwright 输出）及验收报告模板。最终 B1-B7 结论以实际全套命令和浏览器检查为准。
+## 4. 可视化范围说明
+字符串算法输入上限依据网页实际可读性和每字符一帧/多帧的渲染成本设置为 200；LeetCode 原题数学约束为 50,000。这里限制的是教学动画 UI 的输入规模，不改变算法逻辑定义；若需验证更长字符串，算法应使用非动画求解路径。
