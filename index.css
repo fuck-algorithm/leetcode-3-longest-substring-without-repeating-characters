@@ -303,13 +303,15 @@ body {
   fill: var(--state-idle-fill);
   stroke: var(--state-idle-stroke);
   stroke-width: 2;
-  transition: fill 240ms ease, stroke 240ms ease;
+  vector-effect: non-scaling-stroke;
+  transition: fill 240ms ease, stroke 240ms ease, stroke-width 240ms ease;
 }
 
 .canvas-node .node-ring {
   fill: none;
   stroke: transparent;
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
   opacity: 0;
   pointer-events: none;
 }
@@ -990,6 +992,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .canvas-node .node-core,
   .canvas-node .node-ring,
+  .canvas-node.node--current .node-ring,
+  .canvas-node.node--compare .node-ring,
   .canvas-node .node-label,
   .canvas-node .node-badge,
   .canvas-node .node-sublabel,

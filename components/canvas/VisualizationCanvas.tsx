@@ -8,7 +8,7 @@ import {
   resolveLegend
 } from '../../features/animation/motion';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../features/animation/layout';
-import { fitFrameToCanvas, renderFrame } from '../../features/animation/render/renderFrame';
+import { renderFrame } from '../../features/animation/render/renderFrame';
 
 type Props = {
   locale: 'en' | 'zh-CN';
@@ -38,15 +38,12 @@ export function viewBoxFor(width: number, height: number): string {
 const MARKERS = [
   { id: 'flow-arrow', color: '#2f9e7d' },
   { id: 'transfer-arrow', color: '#b07a12' },
-  { id: 'return-arrow', color: '#18765a' },
-  { id: 'pointer-arrow', color: '#6b7f79' }
+  { id: 'return-arrow', color: '#18765a' }
 ] as const;
 
 export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const zoomLayerRef = useRef<SVGGElement | null>(null);
-  const userCameraRef = useRef(false);
-  const [cameraX, setCameraX] = useState(0);
   const [viewBox, setViewBox] = useState(`0 0 ${WIDTH} ${HEIGHT}`);
 
   const summary = useMemo(
@@ -94,7 +91,6 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
     const zoomLayer = d3.select(zoomLayerRef.current);
 
     const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.4, 2.5]).on('zoom', (event) => {
-      userCameraRef.current = true;
       zoomLayer.attr('transform', event.transform.toString());
     });
 
@@ -110,19 +106,6 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
       return;
     }
 
-    const fittedFrame = fitFrameToCanvas(locale === 'en'
-      ? { ...step.frame, nodes: step.frame.nodesEn ?? step.frame.nodes, decorations: step.frame.decorationsEn ?? step.frame.decorations, arrows: step.frame.arrowsEn ?? step.frame.arrows, labels: step.frame.labelsEn ?? step.frame.labels }
-      : step.frame);
-    if (!userCameraRef.current && typeof fittedFrame.cameraX === 'number') {
-      setCameraX(fittedFrame.cameraX);
-      if (Math.abs(cameraX - fittedFrame.cameraX) > 0.5) {
-        d3.select(svgRef.current).call(
-          d3.zoom<SVGSVGElement, unknown>().transform as never,
-          d3.zoomIdentity.translate(fittedFrame.cameraX, 0)
-        );
-      }
-    }
-
     renderFrame(
       d3.select(zoomLayerRef.current),
       step.frame,
@@ -130,7 +113,7 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
       prefersReducedMotion(),
       locale
     );
-  }, [step, speed, locale, cameraX]);
+  }, [step, speed, locale]);
 
   return (
     <div

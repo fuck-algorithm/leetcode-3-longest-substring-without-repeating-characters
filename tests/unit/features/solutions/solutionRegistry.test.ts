@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createSolutionRegistry } from '../../../../features/solutions/solutionRegistry';
+import { fitFrameToCanvas } from '../../../../features/animation/render/renderFrame';
 
 describe('createSolutionRegistry', () => {
   it('builds readable semantic frames with operation, narration and valid bindings', () => {
@@ -17,6 +18,26 @@ describe('createSolutionRegistry', () => {
       if (index > 0) expect(step.narration).not.toBe(solution.steps[index - 1].narration);
       for (const arrow of step.frame.arrows) expect(arrow.text || arrow.kind === 'pointer').toBeTruthy();
       for (const label of step.frame.labels) expect(label.text).toBeTruthy();
+    }
+  });
+
+  it('keeps shared character coordinates unchanged and all plotted glyphs inside the logical canvas', () => {
+    const solution = createSolutionRegistry('abcabcbb')[0];
+    for (let index = 0; index < solution.steps.length; index += 1) {
+      const frame = solution.steps[index].frame;
+      const fitted = fitFrameToCanvas(frame);
+      for (const node of fitted.nodes) {
+        expect(node.x - (node.radius ?? 24)).toBeGreaterThanOrEqual(0);
+        expect(node.x + (node.radius ?? 24)).toBeLessThanOrEqual(1200);
+        expect(node.y - (node.radius ?? 24)).toBeGreaterThanOrEqual(0);
+        expect(node.y + (node.radius ?? 24)).toBeLessThanOrEqual(720);
+      }
+      if (index === 0) continue;
+      const previous = new Map(fitFrameToCanvas(solution.steps[index - 1].frame).nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+      for (const node of fitted.nodes) {
+        const position = previous.get(node.id);
+        if (position && node.id.startsWith('char-')) expect({ x: node.x, y: node.y }).toEqual(position);
+      }
     }
   });
 

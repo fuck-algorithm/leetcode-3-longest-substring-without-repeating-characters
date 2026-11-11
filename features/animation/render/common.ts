@@ -11,7 +11,6 @@ export type RenderTiming = {
   arrowMs: number;
   reduced: boolean;
   locale?: 'en' | 'zh-CN';
-  cameraX?: number;
 };
 
 /**

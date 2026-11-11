@@ -16,11 +16,14 @@ function setup() {
   document.body.innerHTML = `
     <svg>
       <g class="root">
-        <g class="layer-containers"></g>
-        <g class="layer-edges"></g>
-        <g class="layer-arrows"></g>
-        <g class="layer-nodes"></g>
-        <g class="layer-labels"></g>
+        <g class="layout-fit-layer">
+          <g class="layer-containers"></g>
+          <g class="layer-edges"></g>
+          <g class="layer-arrows"></g>
+          <g class="layer-nodes"></g>
+          <g class="layer-labels"></g>
+          <g class="layer-annotations"></g>
+        </g>
       </g>
     </svg>
   `;
@@ -43,6 +46,17 @@ describe('renderFrame', () => {
     expect(fitted.decorations?.every((item) => item.x - (item.radius ?? 0) >= 0 && item.x + (item.radius ?? 0) <= 1200 && item.y - (item.radius ?? 0) >= 0 && item.y + (item.radius ?? 0) <= 720)).toBe(true);
     expect(fitted.arrows[0].from).toEqual({ x: fitted.nodes[0].x, y: fitted.nodes[0].y });
     expect(fitted.arrows[0].to).toEqual({ x: fitted.nodes[1].x, y: fitted.nodes[1].y });
+
+    const layer = setup();
+    renderFrame(layer, original, 1, true);
+    expect(layer.select('.layout-fit-layer').attr('transform')).toBeNull();
+    expect(layer.select('[data-node-id="n0"]').attr('transform')).toBe(`translate(${fitted.nodes[0].x},${fitted.nodes[0].y})`);
+  });
+
+  it('fits a single glyph that lies outside the logical canvas', () => {
+    const fitted = fitFrameToCanvas(frame({ nodes: [node('only', { x: -100, y: -80 })] }));
+    expect(fitted.nodes[0].x - (fitted.nodes[0].radius ?? 0)).toBeGreaterThanOrEqual(0);
+    expect(fitted.nodes[0].y - (fitted.nodes[0].radius ?? 0)).toBeGreaterThanOrEqual(0);
   });
 
   it('按状态渲染节点并保留语义类名', () => {

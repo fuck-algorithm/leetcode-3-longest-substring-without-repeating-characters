@@ -43,7 +43,6 @@ function createSteps(input: string): AlgorithmStep[] {
   const pushFrame = (data: FrameData, title: string, titleEn: string, narration: string, narrationEn: string, operation: NonNullable<AlgorithmStep['operation']>, anchor: string, notes: string, notesEn: string) => {
     const { left: l, right: r, windowStart, windowEnd, candidate, previous } = data;
     const showMap = data.phase === 'inspect';
-    const splitLanes = showMap;
     const layout = layoutSequence(chars.length, {
       left: l,
       right: r,
@@ -51,14 +50,14 @@ function createSteps(input: string): AlgorithmStep[] {
       previous,
       bestStart: data.phase === 'finish' ? data.bestStart : undefined,
       bestLength: data.phase === 'finish' ? data.bestLength : undefined
-    }, { width: CANVAS_WIDTH - (splitLanes ? 520 : 80), maxNodes: 10, radius: NODE_RADIUS + 6, gap: 16, left: 36 });
+    }, { width: CANVAS_WIDTH - 360, maxNodes: 8, radius: NODE_RADIUS + 10, gap: 40, left: 36 });
     const displayIndices = layout.indices;
     const allMapEntries = [...lastSeen.entries()];
     const candidateChar = candidate === null ? undefined : chars[candidate];
     const candidateEntry = candidateChar === undefined ? undefined : allMapEntries.find(([char]) => char === candidateChar);
     const recentEntries = allMapEntries.filter(([char]) => char !== candidateChar).slice(-1);
     const mapEntries = showMap ? [...recentEntries, ...(candidateChar === undefined ? [] : [[candidateChar, candidateEntry?.[1] ?? candidate] as [string, number]])] : [];
-    const tableStart = splitLanes ? CANVAS_WIDTH - 285 : CANVAS_WIDTH / 2 - 76;
+    const tableStart = CANVAS_WIDTH - 285;
     const nodeX = (index: number) => layout.xByIndex.get(index) ?? layout.xByIndex.get(candidate ?? -1) ?? 600;
     const displayBounds = { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
     const nodes = displayIndices.map((index) => {
@@ -143,17 +142,17 @@ function createSteps(input: string): AlgorithmStep[] {
       binding: { anchorIds: [anchor], variables: { left: l, right: Math.max(r, 0), window: effectiveWindow, currentLength: data.currentLength, bestLength: data.bestLength, lastSeen: Object.fromEntries([...lastSeen.entries()]) } },
       frame: {
         layoutBounds: displayBounds,
-        decorations: chars.length ? [
-          ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: '左边界' }] : []),
-          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 415, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? '重复?' : '当前' }] : [])
-        ] : [],
-        decorationsEn: chars.length ? [
-          ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 435, radius: 18, status: 'current' as const, sublabel: 'left' }] : []),
-          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 415, radius: 18, status: 'compare' as const, sublabel: data.phase === 'inspect' ? 'repeat?' : 'current' }] : [])
-        ] : [],
         annotations: layout.gaps.map((gap) => ({ id: `gap-${gap.leftIndex}-${gap.rightIndex}`, x: gap.x, y: 285, text: { 'zh-CN': `… 跳过 ${gap.omitted} 个字符 …`, en: `… ${gap.omitted} characters skipped …` } })),
         annotationsEn: layout.gaps.map((gap) => ({ id: `gap-${gap.leftIndex}-${gap.rightIndex}`, x: gap.x, y: 285, text: `… ${gap.omitted} characters skipped …` })),
         notes: [{ 'zh-CN': notes, en: notesEn }], notesEn: [notesEn],
+        decorations: chars.length ? [
+          ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 390, radius: 16, status: 'current' as const, sublabel: '左边界' }] : []),
+          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 465, radius: 16, status: 'compare' as const, sublabel: '右边界' }] : [])
+        ] : [],
+        decorationsEn: chars.length ? [
+          ...(displayIndices.includes(l) ? [{ id: 'pointer-left', label: `L=${l}`, x: byIndex(l), y: 390, radius: 16, status: 'current' as const, sublabel: 'left' }] : []),
+          ...(r >= 0 && r < chars.length && displayIndices.includes(r) ? [{ id: 'pointer-right', label: `R=${r}`, x: byIndex(r), y: 465, radius: 16, status: 'compare' as const, sublabel: 'right' }] : [])
+        ] : [],
         nodes: chars.length ? allNodes : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],
         nodesEn: chars.length ? allNodes.map(node => ({ ...node, label: node.label })) : [{ id: 'empty-anchor', label: '∅', x: 600, y: 335, radius: 42, status: 'idle' }],
         edges: [], arrows: frameArrows, arrowsEn: frameArrows,

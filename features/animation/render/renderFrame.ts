@@ -14,14 +14,28 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../layout';
  */
 export function fitFrameToCanvas(frame: CanvasFrame): CanvasFrame {
   const glyphs = [...frame.nodes, ...(frame.decorations ?? [])];
-  if (glyphs.length < 2 && !(frame.containers?.length)) return frame;
+  if (glyphs.length === 0 && !(frame.containers?.length)) return frame;
   const containerRects = frame.containers ?? [];
-  const minX = Math.min(...glyphs.map((node) => node.x - (node.radius ?? 24)), ...containerRects.map((container) => container.x));
-  const maxX = Math.max(...glyphs.map((node) => node.x + (node.radius ?? 24)), ...containerRects.map((container) => container.x + container.width));
-  const minY = Math.min(...glyphs.map((node) => node.y - (node.radius ?? 24)), ...containerRects.map((container) => container.y));
-  const maxY = Math.max(...glyphs.map((node) => node.y + (node.radius ?? 24)), ...containerRects.map((container) => container.y + container.height));
-  const padding = 40;
-  if (minX >= padding && maxX <= CANVAS_WIDTH - padding && minY >= padding && maxY <= CANVAS_HEIGHT - padding) return frame;
+  const arrows = [...frame.arrows, ...(frame.arrowsEn ?? [])];
+  const annotations = [...(frame.annotations ?? []), ...(frame.annotationsEn ?? [])];
+  const xCoordinates = [
+    ...glyphs.flatMap((node) => [node.x - (node.radius ?? 24), node.x + (node.radius ?? 24)]),
+    ...containerRects.flatMap((container) => [container.x, container.x + container.width]),
+    ...arrows.flatMap((arrow) => [arrow.from.x, arrow.to.x]),
+    ...annotations.map((annotation) => annotation.x)
+  ];
+  const yCoordinates = [
+    ...glyphs.flatMap((node) => [node.y - (node.radius ?? 24), node.y + (node.radius ?? 24)]),
+    ...containerRects.flatMap((container) => [container.y, container.y + container.height]),
+    ...arrows.flatMap((arrow) => [arrow.from.y, arrow.to.y]),
+    ...annotations.map((annotation) => annotation.y)
+  ];
+  const minX = Math.min(...xCoordinates);
+  const maxX = Math.max(...xCoordinates);
+  const minY = Math.min(...yCoordinates);
+  const maxY = Math.max(...yCoordinates);
+  const padding = 8;
+  if (minX >= 0 && maxX <= CANVAS_WIDTH && minY >= 0 && maxY <= CANVAS_HEIGHT) return frame;
   const sourceWidth = Math.max(maxX - minX, 1);
   const sourceHeight = Math.max(maxY - minY, 1);
   const scale = Math.min((CANVAS_WIDTH - padding * 2) / sourceWidth, (CANVAS_HEIGHT - padding * 2) / sourceHeight, 1);
@@ -37,7 +51,6 @@ export function fitFrameToCanvas(frame: CanvasFrame): CanvasFrame {
   });
   return {
     ...frame,
-    cameraX: frame.cameraX ?? tx,
     arrows: frame.arrows.map(mapArrow),
     arrowsEn: frame.arrowsEn?.map(mapArrow),
     nodes: frame.nodes.map(mapNode),
@@ -46,6 +59,8 @@ export function fitFrameToCanvas(frame: CanvasFrame): CanvasFrame {
     decorationsEn: frame.decorationsEn?.map(mapNode),
     annotations: frame.annotations?.map((annotation) => ({ ...annotation, x: tx + annotation.x * scale, y: ty + annotation.y * scale })),
     annotationsEn: frame.annotationsEn?.map((annotation) => ({ ...annotation, x: tx + annotation.x * scale, y: ty + annotation.y * scale })),
+    labels: frame.labels,
+    labelsEn: frame.labelsEn,
     containers: frame.containers?.map((container) => ({ ...container, x: tx + container.x * scale, y: ty + container.y * scale, width: container.width * scale, height: container.height * scale }))
   };
 }
@@ -80,8 +95,7 @@ export function renderFrame(
     exitMs: motionDuration(MOTION.exitMs, speed, reduced),
     arrowMs: motionDuration(MOTION.arrowMs, speed, reduced),
     reduced,
-    locale,
-    cameraX: visibleFrame.cameraX ?? 0
+    locale
   };
 
   const visibleNodes = visibleFrame.nodes;
@@ -89,8 +103,7 @@ export function renderFrame(
   const visibleAnnotations = locale === 'en' ? visibleFrame.annotationsEn ?? visibleFrame.annotations ?? [] : visibleFrame.annotations ?? [];
   const nestedLayer = layer.select<SVGGElement>('.layout-fit-layer');
   const fitLayer = nestedLayer.empty() ? layer : nestedLayer;
-  const fitTransform = visibleFrame.cameraX !== undefined ? `translate(${visibleFrame.cameraX},0)` : '';
-  fitLayer.attr('transform', fitTransform);
+  fitLayer.attr('transform', null);
   const localizedNodeById = new Map(visibleNodes.map((node) => [node.id, node]));
   renderNodes(fitLayer.select<SVGGElement>('.layer-decorations'), visibleFrame.decorations ?? [], timing, locale);
   renderContainers(fitLayer.select<SVGGElement>('.layer-containers'), visibleFrame.containers ?? [], timing);

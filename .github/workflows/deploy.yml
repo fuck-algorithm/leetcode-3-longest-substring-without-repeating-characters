@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/leetcode3-animation-rewrite
+      - fix/leetcode3-coordinate-layout-v2
   workflow_dispatch:
 
 permissions:
