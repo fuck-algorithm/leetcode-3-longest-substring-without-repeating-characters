@@ -147,13 +147,16 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await gotoHome(page);
     const input = page.getByTestId('algo-input');
     await input.fill('abcabcbb');
+    await page.getByTestId('next-step-btn').click();
     await input.evaluate((element: HTMLInputElement) => element.blur());
     await expect(page.getByTestId('canvas-input-echo')).toContainText('abcabcbb');
     const narration = page.getByTestId('step-narration');
     const before = await narration.innerText();
-    for (let index = 0; index < 7; index += 1) await page.getByTestId('next-step-btn').click();
+    for (let index = 0; index < 30; index += 1) {
+      if ((await narration.innerText()).includes('lastSeen lookup returns 0')) break;
+      await page.getByTestId('next-step-btn').click();
+    }
     await expect(narration).not.toHaveText(before);
-    await expect(narration).toContainText('lastSeen');
     await expect(narration).toContainText('lastSeen lookup returns 0');
     await expect(page.locator('[data-node-id="last-97"]')).toHaveCount(1);
     await expect(page.locator('[data-node-id="char-3"][data-status="compare"]')).toBeVisible();
@@ -161,12 +164,17 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await expect(page.locator('.layer-decorations [data-node-id="pointer-left"]')).toBeVisible();
     await expect(page.locator('.layer-decorations [data-node-id="pointer-right"]')).toBeVisible();
     await expect(page.locator('.arrow-label').filter({ hasText: 'Repeat?' })).toBeVisible();
+    await expect(page.locator('.window-range-label')).toBeVisible();
+    await expect(page.locator('.pending-duplicate')).toHaveAttribute('marker-end', 'url(#window-arrow)');
+    await expect(page.locator('.pending-duplicate-label')).toHaveText('a @3 repeats @0');
+    await expect(page.locator('.repeat-candidate-ring')).toHaveCount(1);
     await expect(page.locator('[data-status="current"]')).toHaveCount(1);
     const repeatedExplanation = await narration.innerText();
     await page.getByTestId('next-step-btn').click();
     await expect(narration).not.toHaveText(repeatedExplanation);
     await expect(narration).toContainText('left=max(0, 0+1)=1');
     await expect(page.locator('.arrow-label').filter({ hasText: 'Move left' })).toBeVisible();
+    await expect(page.locator('.pending-duplicate')).toHaveCount(0);
     await expect(page.getByTestId('variable-watch')).toContainText('left');
   });
 
@@ -238,6 +246,16 @@ test.describe('Algorithm Visualization Acceptance', () => {
   test('E2E-013 速度偏好刷新后保留', async ({ page }) => {
     await gotoHome(page);
     await page.getByTestId('speed-2x').click();
+    await page.waitForFunction(() => new Promise<boolean>((resolve) => {
+      const request = indexedDB.open('algo-viz', 1);
+      request.onsuccess = () => {
+        const transaction = request.result.transaction('settings', 'readonly');
+        const setting = transaction.objectStore('settings').get('playback-speed');
+        setting.onsuccess = () => resolve(setting.result === 2);
+        setting.onerror = () => resolve(false);
+      };
+      request.onerror = () => resolve(false);
+    }));
     await page.reload();
     await expect(page.getByTestId('speed-2x')).toHaveClass(/active/);
   });

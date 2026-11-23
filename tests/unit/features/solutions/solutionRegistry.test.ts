@@ -41,6 +41,31 @@ describe('createSolutionRegistry', () => {
     }
   });
 
+  it('marks the active window and connects an in-window duplicate to its earlier occurrence', () => {
+    const solution = createSolutionRegistry('abcabcbb')[0];
+    const include = solution.steps.find((step) => step.operation === 'read' && step.binding.variables.right === 2)!;
+    const duplicate = solution.steps.find((step) => step.narration?.includes('候选字符 s[3]'))!;
+    expect(include.frame.windowRange).toEqual({ startId: 'char-0', endId: 'char-2' });
+    expect(duplicate.frame.pendingNodeId).toBe('char-3');
+    expect(duplicate.frame.pendingAnchorNodeId).toBe('char-0');
+  });
+
+  it('separates map writes from best-window updates and explains when the best stays unchanged', () => {
+    const solution = createSolutionRegistry('aaa')[0];
+    const writeIndex = solution.steps.findIndex((step) => step.operation === 'insert' && step.binding.variables.right === 1);
+    const unchangedIndex = solution.steps.findIndex((step) => step.title === '保留当前最长答案' && step.binding.variables.right === 1);
+    expect(writeIndex).toBeGreaterThan(-1);
+    expect(unchangedIndex).toBe(writeIndex + 1);
+    expect(solution.steps[writeIndex].narration).toContain('lastSeen[a]');
+    expect(solution.steps[unchangedIndex].narration).toContain('答案区间 [0,1) 保持不变');
+
+    const longer = createSolutionRegistry('abc')[0];
+    const writeC = longer.steps.findIndex((step) => step.operation === 'insert' && step.binding.variables.right === 2);
+    const bestIndex = longer.steps.findIndex((step) => step.operation === 'match' && step.binding.variables.right === 2);
+    expect(bestIndex).toBe(writeC + 1);
+    expect(longer.steps[bestIndex].narration).toContain('旧 best=2');
+  });
+
   it('teaches repeated characters as a lookup, shrink and re-entry sequence with observable map rows', () => {
     const solution = createSolutionRegistry('abcabcbb')[0];
     const duplicate = solution.steps.find((step) => step.narration?.includes('候选字符 s[3]'))!;

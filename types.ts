@@ -157,6 +157,12 @@ export interface CanvasAnnotation {
 export interface CanvasFrame {
   /** Invisible/non-interactive coordinate bounds reserve viewport space for data structures. */
   layoutBounds?: { x: number; y: number; width: number; height: number };
+  /** Character IDs at the inclusive edges of the active unique-character window. */
+  windowRange?: { startId: string; endId: string };
+  /** An inspected repeated character that has not entered the active window yet. */
+  pendingNodeId?: string;
+  /** The earlier in-window occurrence linked to the pending duplicate. */
+  pendingAnchorNodeId?: string;
   annotations?: CanvasAnnotation[];
   annotationsEn?: CanvasAnnotation[];
   /** Non-data glyphs such as explicit left/right boundary arrows. */

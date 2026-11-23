@@ -17,11 +17,16 @@ function setup() {
     <svg>
       <g class="root">
         <g class="layout-fit-layer">
+          <g class="layer-window"></g>
           <g class="layer-containers"></g>
           <g class="layer-edges"></g>
+          <g class="layer-window-nodes"></g>
+          <g class="layer-window-arrows"></g>
           <g class="layer-arrows"></g>
+          <g class="layer-decorations"></g>
           <g class="layer-nodes"></g>
           <g class="layer-labels"></g>
+          <g class="layer-window-labels"></g>
           <g class="layer-annotations"></g>
         </g>
       </g>
@@ -51,6 +56,70 @@ describe('renderFrame', () => {
     renderFrame(layer, original, 1, true);
     expect(layer.select('.layout-fit-layer').attr('transform')).toBeNull();
     expect(layer.select('[data-node-id="n0"]').attr('transform')).toBe(`translate(${fitted.nodes[0].x},${fitted.nodes[0].y})`);
+  });
+
+  it('renders a labeled active-window range and connector for an in-window duplicate', () => {
+    const layer = setup();
+    renderFrame(layer, frame({
+      nodes: [node('a', { x: 100, y: 300 }), node('b', { x: 180, y: 300 })],
+      windowRange: { startId: 'a', endId: 'b' },
+      pendingNodeId: 'b', pendingAnchorNodeId: 'a'
+    }), 1, true);
+    expect(layer.selectAll('.window-range').size()).toBe(1);
+    expect(layer.select('.window-range-label').text()).toBe('有效窗口 · 无重复');
+    expect(layer.selectAll('.layer-window-arrows .pending-duplicate').size()).toBe(1);
+    expect(layer.select('.pending-duplicate-label').text()).toBe('索引b「b」重复于a');
+    expect(layer.select('[data-target-id="b"]').size()).toBe(1);
+  });
+
+  it('keeps window overlays on the target coordinates with the same transition timing as nodes', () => {
+    const layer = setup();
+    const first = frame({
+      nodes: [node('a', { x: 100, y: 300 }), node('b', { x: 180, y: 300 })],
+      windowRange: { startId: 'a', endId: 'b' },
+      pendingNodeId: 'b', pendingAnchorNodeId: 'a'
+    });
+    const next = frame({
+      nodes: [node('a', { x: 140, y: 300 }), node('b', { x: 260, y: 300 })],
+      windowRange: { startId: 'a', endId: 'b' },
+      pendingNodeId: 'b', pendingAnchorNodeId: 'a'
+    });
+    renderFrame(layer, first, 1, true);
+    renderFrame(layer, next, 1, true);
+    const range = layer.select('rect.window-range');
+    const duplicate = layer.select('.pending-duplicate');
+    const ring = layer.select('.repeat-candidate-ring');
+    const nodeGroup = layer.select('[data-node-id="b"]');
+    expect(range.attr('x')).toBe('104');
+    expect(duplicate.attr('d')).toContain('M140,282');
+    expect(ring.attr('cx')).toBe('260');
+    expect(nodeGroup.attr('transform')).toBe('translate(260,300)');
+    expect(range.transition('move').duration()).toBe(250);
+    expect(duplicate.transition('move').duration()).toBe(250);
+    expect(ring.transition('move').duration()).toBe(250);
+  });
+
+  it('renders English labels for the duplicate connector', () => {
+    const layer = setup();
+    renderFrame(layer, frame({
+      nodes: [node('char-2', { label: 'x', x: 100, y: 300 }), node('char-5', { label: 'x', x: 300, y: 300 })],
+      windowRange: { startId: 'char-2', endId: 'char-2' }, pendingNodeId: 'char-5', pendingAnchorNodeId: 'char-2'
+    }), 1, true, 'en');
+    expect(layer.select('.pending-duplicate-label').text()).toBe('x @5 repeats @2');
+    expect(layer.select('.window-range-label').text()).toBe('valid window · no repeats');
+  });
+
+  it('clears active-window and duplicate graphics when a later frame has no window metadata', () => {
+    const layer = setup();
+    renderFrame(layer, frame({
+      nodes: [node('a', { x: 100, y: 300 }), node('b', { x: 180, y: 300 })],
+      windowRange: { startId: 'a', endId: 'b' }, pendingNodeId: 'b', pendingAnchorNodeId: 'a'
+    }), 1, true);
+    renderFrame(layer, frame({ nodes: [node('a'), node('b')] }), 1, true);
+    expect(layer.selectAll('.window-range').size()).toBe(0);
+    expect(layer.selectAll('.pending-duplicate').size()).toBe(0);
+    expect(layer.selectAll('.pending-duplicate-label').size()).toBe(0);
+    expect(layer.select('[data-node-id="b"]').classed('is-repeat-candidate')).toBe(false);
   });
 
   it('fits a single glyph that lies outside the logical canvas', () => {

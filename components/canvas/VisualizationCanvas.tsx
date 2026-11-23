@@ -155,6 +155,9 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
         aria-label={stepContext}
       >
         <defs>
+          <marker id="window-arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L8,4 L0,8 z" fill="#c94a4a" />
+          </marker>
           {MARKERS.map((marker) => (
             <marker
               key={marker.id}
@@ -172,12 +175,16 @@ export function VisualizationCanvas({ locale, data, step, solution, speed = 1 }:
         <g ref={zoomLayerRef} className="zoom-layer">
           <rect className="canvas-backdrop" x={0} y={0} width={WIDTH} height={HEIGHT} />
           <g className="layout-fit-layer">
+            <g className="layer-window" />
             <g className="layer-containers" />
             <g className="layer-edges" />
+            <g className="layer-window-nodes" />
             <g className="layer-arrows" />
+            <g className="layer-window-arrows" />
             <g className="layer-decorations" />
             <g className="layer-nodes" />
             <g className="layer-labels" />
+            <g className="layer-window-labels" />
             <g className="layer-annotations" />
           </g>
         </g>

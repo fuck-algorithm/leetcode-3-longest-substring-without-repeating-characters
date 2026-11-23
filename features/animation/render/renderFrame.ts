@@ -1,12 +1,14 @@
-import type { CanvasAnnotation, CanvasFrame } from '../../../types';
+import * as d3 from 'd3';
+import type { CanvasAnnotation, CanvasFrame, CanvasNode } from '../../../types';
 import { MOTION, motionDuration } from '../motion';
-import type { LayerSelection } from './common';
+import { fadeOutAndRemove, type LayerSelection, type RenderTiming } from './common';
 import { renderArrows } from './arrows';
 import { renderContainers } from './containers';
 import { renderEdges } from './edges';
 import { renderLabels } from './labels';
 import { renderNodes } from './nodes';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../layout';
+
 
 /**
  * 单帧渲染入口：分层 keyed join + 过渡。
@@ -72,6 +74,122 @@ export function fitFrameScale(source: CanvasFrame, fitted: CanvasFrame): number 
   return (fittedNode.radius ?? 24) / (sourceNode.radius ?? 24);
 }
 
+function renderWindowRange(parentLayer: LayerSelection, frame: CanvasFrame, locale: 'en' | 'zh-CN', timing: RenderTiming): void {
+  const layer = parentLayer.select<SVGGElement>('.layer-window');
+  const range = frame.windowRange;
+  const nodes = new Map(frame.nodes.map((node) => [node.id, node]));
+  const allNodes = new Map([...frame.nodes, ...(frame.decorations ?? [])].map((node) => [node.id, node]));
+  const start = range ? nodes.get(range.startId) : undefined;
+  const end = range ? nodes.get(range.endId) : undefined;
+  const valid = start && end && start.y === end.y ? [{ start, end }] : [];
+  const band = layer.selectAll<SVGRectElement, (typeof valid)[number]>('rect.window-range').data(valid);
+  fadeOutAndRemove(band.exit(), timing);
+  const activeBand = band.enter().append('rect').attr('class', 'window-range').merge(band).interrupt('exit');
+  const setBand = (selection: typeof activeBand) => selection
+    .attr('x', ({ start }) => start.x - (start.radius ?? 24) - 12)
+    .attr('y', ({ start }) => start.y - (start.radius ?? 24) - 16)
+    .attr('width', ({ start, end }) => end.x - start.x + (start.radius ?? 24) + (end.radius ?? 24) + 24)
+    .attr('height', ({ start }) => (start.radius ?? 24) * 2 + 32)
+    .attr('rx', 18)
+    .attr('opacity', 1);
+  if (timing.reduced) setBand(activeBand);
+  else setBand(activeBand.transition('move').duration(MOTION.updateMs).ease(d3.easeCubicOut) as unknown as typeof activeBand);
+
+  const labelLayer = parentLayer.select<SVGGElement>('.layer-window-labels');
+  const rangeGroup = labelLayer.selectAll<SVGGElement, (typeof valid)[number]>('g.window-range-content').data(valid);
+  fadeOutAndRemove(rangeGroup.exit(), timing);
+  const rangeEnter = rangeGroup.enter().append('g').attr('class', 'window-range-content').attr('opacity', 0);
+  const rangeContent = rangeEnter.merge(rangeGroup).interrupt('exit');
+  const caption = locale === 'en' ? 'valid window · no repeats' : '有效窗口 · 无重复';
+  const captionX = (datum: (typeof valid)[number]) => datum.end.x - datum.start.x > 220
+    ? (datum.start.x + datum.end.x) / 2
+    : datum.start.x - (datum.start.radius ?? 24) - 12;
+  const repeatedCaptionX = (datum: (typeof valid)[number]) => (datum.start.x + datum.end.x) / 2;
+  const rangeLabel = rangeContent.selectAll<SVGTextElement, (typeof valid)[number]>('text.window-range-label')
+    .data((datum) => [datum]);
+  rangeLabel.exit().remove();
+  const labels = rangeLabel.enter().append('text').attr('class', 'window-range-label').merge(rangeLabel).interrupt('exit');
+  const setLabels = (selection: typeof labels) => selection
+    .attr('x', (datum) => frame.pendingNodeId && frame.pendingAnchorNodeId ? repeatedCaptionX(datum) : captionX(datum))
+    .attr('text-anchor', 'middle')
+    .attr('y', ({ start, end }) => {
+      const radius = start.radius ?? 24;
+      const hasDuplicate = frame.pendingNodeId !== undefined && frame.pendingAnchorNodeId !== undefined;
+      const duplicateNode = hasDuplicate ? nodes.get(frame.pendingNodeId!) : undefined;
+      const duplicateAbove = duplicateNode !== undefined && duplicateNode.y < start.y;
+      const offset = 19 + (duplicateAbove ? Math.max(radius, end.radius ?? 24) * 2.3 : 0);
+      return start.y - radius - offset;
+    })
+    .text(caption);
+  if (timing.reduced) {
+    setLabels(labels);
+    rangeContent.attr('opacity', 1);
+  } else {
+    setLabels(labels.transition('move').duration(MOTION.updateMs).ease(d3.easeCubicOut) as unknown as typeof labels);
+    rangeContent.interrupt('move').transition('move').duration(MOTION.updateMs).ease(d3.easeCubicOut).attr('opacity', 1);
+  }
+
+  const activePending = frame.pendingNodeId && frame.pendingAnchorNodeId && valid.length
+    ? { node: allNodes.get(frame.pendingNodeId), anchor: allNodes.get(frame.pendingAnchorNodeId) }
+    : undefined;
+  const duplicate = activePending?.node && activePending.anchor ? [activePending as { node: CanvasNode; anchor: CanvasNode }] : [];
+  const arrowLayer = parentLayer.select<SVGGElement>('.layer-window-arrows');
+  const arrows = arrowLayer.selectAll<SVGPathElement, { node: CanvasNode; anchor: CanvasNode }>('path.pending-duplicate')
+    .data(duplicate, ({ node }) => node.id);
+  fadeOutAndRemove(arrows.exit(), timing);
+  const activeArrows = arrows.enter().append('path').attr('class', 'pending-duplicate').attr('opacity', 0).merge(arrows).interrupt('exit');
+  const setArrows = (selection: typeof activeArrows) => selection
+    .attr('d', ({ node, anchor }) => {
+      const radius = Math.max(anchor.radius ?? 24, node.radius ?? 24);
+      const y1 = anchor.y - radius * 0.75;
+      const y2 = node.y - radius * 0.75;
+      const controlY = Math.min(anchor.y, node.y) - radius * 1.65;
+      return `M${anchor.x},${y1} Q${(anchor.x + node.x) / 2},${controlY} ${node.x},${y2}`;
+    })
+    .attr('marker-end', 'url(#window-arrow)')
+    .attr('aria-label', ({ node, anchor }) => `${typeof node.label === 'string' ? node.label : node.label[locale]}: ${locale === 'en' ? 'duplicate of' : '与旧位置重复'} ${typeof anchor.label === 'string' ? anchor.label : anchor.label[locale]}`)
+    .attr('opacity', 1);
+  if (timing.reduced) setArrows(activeArrows);
+  else setArrows(activeArrows.transition('move').duration(timing.updateMs).ease(d3.easeCubicOut) as unknown as typeof activeArrows);
+
+  const duplicateLabelLayer = parentLayer.select<SVGGElement>('.layer-window-labels');
+  const duplicateLabel = duplicateLabelLayer.selectAll<SVGTextElement, { node: CanvasNode; anchor: CanvasNode }>('text.pending-duplicate-label')
+    .data(duplicate, ({ node }) => node.id);
+  fadeOutAndRemove(duplicateLabel.exit(), timing);
+  const activeLabels = duplicateLabel.enter().append('text').attr('class', 'pending-duplicate-label').attr('opacity', 0).merge(duplicateLabel).interrupt('exit');
+  const setDuplicateLabels = (selection: typeof activeLabels) => selection
+    .attr('x', ({ node, anchor }) => (anchor.x + node.x) / 2)
+    .attr('y', ({ node, anchor }) => Math.min(anchor.y, node.y) + Math.max(anchor.radius ?? 24, node.radius ?? 24) * 1.65 + 15)
+    .attr('text-anchor', 'middle')
+    .attr('paint-order', 'stroke')
+    .attr('stroke', '#f7fbfa')
+    .attr('stroke-width', 5)
+    .attr('stroke-linejoin', 'round')
+    .text(({ node, anchor }) => locale === 'en'
+      ? `${typeof node.label === 'string' ? node.label : node.label[locale]} @${node.id.replace('char-', '')} repeats @${anchor.id.replace('char-', '')}`
+      : `索引${node.id.replace('char-', '')}「${typeof node.label === 'string' ? node.label : node.label[locale]}」重复于${anchor.id.replace('char-', '')}`)
+    .attr('opacity', 1);
+  if (timing.reduced) setDuplicateLabels(activeLabels);
+  else setDuplicateLabels(activeLabels.transition('move').duration(MOTION.updateMs).ease(d3.easeCubicOut) as unknown as typeof activeLabels);
+
+  parentLayer.select<SVGGElement>('.layer-nodes').selectAll<SVGGElement, CanvasNode>('g.canvas-node')
+    .classed('is-repeat-candidate', (node) => node.id === frame.pendingNodeId && duplicate.length > 0);
+  const rings = parentLayer.select<SVGGElement>('.layer-window-nodes')
+    .selectAll<SVGCircleElement, CanvasNode>('circle.repeat-candidate-ring')
+    .data(duplicate.map(({ node }) => node), (node) => node.id);
+  fadeOutAndRemove(rings.exit(), timing);
+  const activeRings = rings.enter().append('circle').attr('class', 'repeat-candidate-ring').attr('opacity', 0).merge(rings).interrupt('exit');
+  const setRings = (selection: typeof activeRings) => selection
+    .attr('data-target-id', (node) => node.id)
+    .attr('cx', (node) => node.x)
+    .attr('cy', (node) => node.y)
+    .attr('r', (node) => (node.radius ?? 24) + 7)
+    .attr('aria-label', (node) => `${typeof node.label === 'string' ? node.label : node.label[locale]}: ${locale === 'en' ? 'duplicate candidate' : '重复候选'}`)
+    .attr('opacity', 1);
+  if (timing.reduced) setRings(activeRings);
+  else setRings(activeRings.transition('move').duration(MOTION.updateMs).ease(d3.easeCubicOut) as unknown as typeof activeRings);
+}
+
 export function renderFrame(
   layer: LayerSelection,
   frame: CanvasFrame,
@@ -110,6 +228,7 @@ export function renderFrame(
   renderEdges(fitLayer.select<SVGGElement>('.layer-edges'), visibleFrame.edges, localizedNodeById, timing);
   renderArrows(fitLayer.select<SVGGElement>('.layer-arrows'), visibleFrame.arrows, timing, locale);
   renderNodes(fitLayer.select<SVGGElement>('.layer-nodes'), visibleNodes, timing, locale);
+  renderWindowRange(fitLayer, visibleFrame, locale, timing);
   renderLabels(fitLayer.select<SVGGElement>('.layer-labels'), visibleLabels, localizedNodeById, timing, visibleFrame.containers ?? [], locale);
   const annotationJoin = fitLayer.select<SVGGElement>('.layer-annotations').selectAll<SVGTextElement, CanvasAnnotation>('text.canvas-annotation').data(visibleAnnotations ?? [], item => item.id);
   annotationJoin.exit().remove();

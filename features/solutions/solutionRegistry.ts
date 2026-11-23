@@ -16,7 +16,7 @@ function validateInput(raw: string): InputValidationResult {
   return { valid: true, parsed: raw };
 }
 
-type Phase = 'init' | 'inspect' | 'shrink' | 'include' | 'record' | 'finish';
+type Phase = 'init' | 'inspect' | 'shrink' | 'include' | 'record' | 'compare-best' | 'finish';
 type FrameData = {
   left: number;
   right: number;
@@ -42,7 +42,8 @@ function createSteps(input: string): AlgorithmStep[] {
 
   const pushFrame = (data: FrameData, title: string, titleEn: string, narration: string, narrationEn: string, operation: NonNullable<AlgorithmStep['operation']>, anchor: string, notes: string, notesEn: string) => {
     const { left: l, right: r, windowStart, windowEnd, candidate, previous } = data;
-    const showMap = data.phase === 'inspect';
+    const repeatedInside = candidate !== null && previous !== null && previous >= l;
+    const showMap = data.phase === 'inspect' || data.phase === 'record' || data.phase === 'compare-best';
     const layout = layoutSequence(chars.length, {
       left: l,
       right: r,
@@ -67,6 +68,7 @@ function createSteps(input: string): AlgorithmStep[] {
       const isBest = data.bestLength > 0 && index >= data.bestStart && index < data.bestStart + data.bestLength;
       const isFuture = index > r && data.phase !== 'finish';
       const status = isFuture ? 'idle' as const : data.phase === 'finish' && isBest ? 'done' as const
+        : data.phase === 'compare-best' && isBest && !isCandidate ? 'visited' as const
         : data.phase === 'inspect' && (index === previous || isCandidate) ? 'compare' as const
         : isCandidate ? (data.phase === 'inspect' ? 'compare' as const : 'current' as const)
         : inWindow ? 'visited' as const
@@ -92,7 +94,8 @@ function createSteps(input: string): AlgorithmStep[] {
       text: { 'zh-CN': `移动左边界`, en: `Move left` },
       kind: 'transfer' as const, curve: 0, labelOffset: { x: 0, y: 18 }
     }] : [];
-    const mapCell = (column: number) => ({ x: tableStart + (column % 2) * 100, y: 550 + Math.floor(column / 2) * 58 });
+    const mapY = Math.max(470, Math.min(590, CANVAS_HEIGHT - (Math.ceil(displayIndices.length / 2) * (layout.radius * 2 + 100))));
+    const mapCell = (column: number) => ({ x: tableStart + (column % 2) * 100, y: mapY + Math.floor(column / 2) * 58 });
     const hashRows = mapEntries.map(([char, index], row) => ({ char, index, id: `last-${char.codePointAt(0) ?? row}`, ...mapCell(row) }));
     const positions = new Map(hashRows.map(row => [row.char, { x: row.x, y: row.y }]));
     const allNodes = [
@@ -119,11 +122,6 @@ function createSteps(input: string): AlgorithmStep[] {
       text: { 'zh-CN': `答案「${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}」`, en: `Answer “${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}”` },
       detail: { 'zh-CN': `区间 [${data.bestStart}, ${data.bestStart + data.bestLength}) · 长度 ${data.bestLength}`, en: `Range [${data.bestStart}, ${data.bestStart + data.bestLength}) · length ${data.bestLength}` },
       position: 'bottom', variant: 'callout', tone: 'accent'
-    }] : !showMap && data.phase === 'include' && effectiveWindow ? [{
-      id: 'window-label', targetId: `char-${Math.max(windowStart, 0)}`,
-      text: { 'zh-CN': `窗口 ${effectiveWindow}`, en: `Window ${effectiveWindow}` },
-      detail: { 'zh-CN': `${data.currentLength} 个字符`, en: `${data.currentLength} characters` },
-      position: 'top', variant: 'callout', tone: 'accent'
     }] : [];
     if (data.phase === 'finish' && data.bestLength > 0) {
       const answerText = `答案「${chars.slice(data.bestStart, data.bestStart + data.bestLength).join('')}」`;
@@ -142,6 +140,11 @@ function createSteps(input: string): AlgorithmStep[] {
       binding: { anchorIds: [anchor], variables: { left: l, right: Math.max(r, 0), window: effectiveWindow, currentLength: data.currentLength, bestLength: data.bestLength, lastSeen: Object.fromEntries([...lastSeen.entries()]) } },
       frame: {
         layoutBounds: displayBounds,
+        windowRange: chars.length > 0 && windowStart >= 0 && windowStart < chars.length && windowStart <= (data.phase === 'include' ? r : windowEnd)
+          ? { startId: `char-${windowStart}`, endId: `char-${data.phase === 'include' ? r : windowEnd}` }
+          : undefined,
+        pendingNodeId: candidate !== null && data.phase === 'inspect' && repeatedInside ? `char-${candidate}` : undefined,
+        pendingAnchorNodeId: previous !== null && data.phase === 'inspect' && repeatedInside ? `char-${previous}` : undefined,
         annotations: layout.gaps.map((gap) => ({ id: `gap-${gap.leftIndex}-${gap.rightIndex}`, x: gap.x, y: 285, text: { 'zh-CN': `… 跳过 ${gap.omitted} 个字符 …`, en: `… ${gap.omitted} characters skipped …` } })),
         annotationsEn: layout.gaps.map((gap) => ({ id: `gap-${gap.leftIndex}-${gap.rightIndex}`, x: gap.x, y: 285, text: `… ${gap.omitted} characters skipped …` })),
         notes: [{ 'zh-CN': notes, en: notesEn }], notesEn: [notesEn],
@@ -158,12 +161,12 @@ function createSteps(input: string): AlgorithmStep[] {
         edges: [], arrows: frameArrows, arrowsEn: frameArrows,
         labels, labelsEn: labels.map(label => ({ ...label, text: typeof label.text === 'string' ? label.text : label.text.en, detail: typeof label.detail === 'string' ? label.detail : label.detail?.en })),
         metrics: [
-          { label: { 'zh-CN': '窗口区间', en: 'Window range' }, value: rangeText },
+          { label: { 'zh-CN': '当前窗口', en: 'Current window' }, value: rangeText },
           { label: { 'zh-CN': '当前长度', en: 'Current length' }, value: data.currentLength },
           { label: { 'zh-CN': '最长长度', en: 'Best length' }, value: data.bestLength }
         ],
         metricsEn: [
-          { label: { 'zh-CN': 'Window range', en: 'Window range' }, value: rangeText },
+          { label: { 'zh-CN': 'Current window', en: 'Current window' }, value: rangeText },
           { label: { 'zh-CN': 'Current length', en: 'Current length' }, value: data.currentLength },
           { label: { 'zh-CN': 'Best length', en: 'Best length' }, value: data.bestLength }
         ]
@@ -208,28 +211,33 @@ function createSteps(input: string): AlgorithmStep[] {
         'compare', 'duplicate', `旧出现位置 ${previous} 已被边界排除，不构成当前重复。`, `The prior occurrence at ${previous} is already excluded by the left boundary.`));
     }
     const beforeIncludeLength = right - left;
-    steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right - 1, currentLength: beforeIncludeLength, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: previous ?? null, phase: 'include' },
+    steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength: beforeIncludeLength + 1, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: previous ?? null, phase: 'include' },
       `读取 s[${right}] 并加入窗口`, `Read s[${right}] and include it`,
       `读取候选字符「${char}」。从 left=${left} 到 right=${right} 的窗口现在无重复，加入后区间为 [${left},${right}]「${chars.slice(left, right + 1).join('')}」，当前长度 ${right - left + 1}。`,
       `Read candidate “${char}”. The range from left=${left} to right=${right} is now unique; including it forms [${left},${right}] “${chars.slice(left, right + 1).join('')}”, current length ${right - left + 1}.`,
       'read', 'read', `字符进入窗口，接下来更新 lastSeen[${char}]。`, `The character enters the window; next update lastSeen[${char}].`));
     lastSeen.set(char, right);
     const currentLength = right - left + 1;
-    if (currentLength > bestLength) {
+    steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: right, phase: 'record' },
+      '写入字符的最新位置', 'Store the latest character position',
+      `将 lastSeen[${char}] 更新为 ${right}，供后续重复查询使用；当前窗口长度为 ${currentLength}，已有最长长度 ${bestLength}。`,
+      `Set lastSeen[${char}]=${right} for future duplicate checks; the current window length is ${currentLength}, with best length ${bestLength}.`,
+      'insert', 'store', `映射卡片保存字符 ${char} 最近出现的索引 ${right}。`, `The map card stores the latest index ${right} for ${char}.`));
+    if (currentLength <= bestLength) {
+      steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: right, phase: 'compare-best' },
+        '保留当前最长答案', 'Keep the current longest answer',
+        `当前窗口长度 ${currentLength} 未超过 best=${bestLength}，所以答案区间 [${bestStart},${bestStart + bestLength}) 保持不变。`,
+        `The current window length ${currentLength} does not exceed best=${bestLength}, so keep answer range [${bestStart},${bestStart + bestLength}).`,
+        'compare', 'compare-best', `比较当前长度与 best，答案不变。`, `Compare the current length with best; the answer stays unchanged.`));
+    } else {
       const previousBest = bestLength;
       bestStart = left;
       bestLength = currentLength;
       steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: right, phase: 'record' },
-        '更新最长记录', 'Update the longest record',
-        `当前窗口长度 ${currentLength} 大于旧 best=${previousBest}，因此记录子串 [${bestStart},${bestStart + bestLength})「${chars.slice(bestStart, bestStart + bestLength).join('')}」，best 更新为 ${bestLength}；同时 lastSeen[${char}] 写入 ${right}。`,
-        `Current window length ${currentLength} exceeds old best=${previousBest}. Record [${bestStart},${bestStart + bestLength}) “${chars.slice(bestStart, bestStart + bestLength).join('')}”, set best=${bestLength}, and write lastSeen[${char}]=${right}.`,
+        '用更长窗口更新答案', 'Update the answer with a longer window',
+        `当前窗口长度 ${currentLength} 大于旧 best=${previousBest}，因此把 [${bestStart},${bestStart + bestLength})「${chars.slice(bestStart, bestStart + bestLength).join('')}」记为新答案。`,
+        `The current window length ${currentLength} exceeds old best=${previousBest}, so record [${bestStart},${bestStart + bestLength}) “${chars.slice(bestStart, bestStart + bestLength).join('')}” as the new answer.`,
         'match', 'update-best', `更长窗口替换最佳答案；start/end 使用左闭右开区间。`, `A longer window replaces the best answer; start/end use a half-open interval.`));
-    } else {
-      steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: right, phase: 'record' },
-        '记录字符的最新位置', 'Store the latest character position',
-        `窗口 [${left},${right}]「${chars.slice(left, right + 1).join('')}」长度 ${currentLength} 未超过 best=${bestLength}，答案保持不变；lastSeen[${char}] 更新为 ${right}。`,
-        `Window [${left},${right}] “${chars.slice(left, right + 1).join('')}” has length ${currentLength}, not greater than best=${bestLength}; keep the answer and update lastSeen[${char}]=${right}.`,
-        'insert', 'store', `即使答案不变，也要更新字符最近位置供后续查询。`, `Even when best stays unchanged, update the last-seen index for future lookups.`));
     }
   }
   steps.push(pushFrame({ left, right: chars.length - 1, windowStart: left, windowEnd: chars.length - 1, currentLength: chars.length - left, bestStart, bestLength, candidate: null, previous: null, highlightedMapIndex: null, phase: 'finish' },
