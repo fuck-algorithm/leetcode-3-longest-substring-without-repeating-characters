@@ -141,6 +141,7 @@ function App() {
             language={language}
             onLanguageChange={setLanguage}
             codeArtifacts={activeSolution.codes}
+            previousStep={playback.currentStep > 0 ? activeSolution.steps[playback.currentStep - 1] : undefined}
             step={activeSolution.steps[playback.currentStep]}
           />
         </aside>

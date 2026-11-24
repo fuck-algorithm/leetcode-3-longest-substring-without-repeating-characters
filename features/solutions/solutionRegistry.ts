@@ -18,6 +18,8 @@ function validateInput(raw: string): InputValidationResult {
 
 type Phase = 'init' | 'inspect' | 'shrink' | 'include' | 'record' | 'compare-best' | 'finish';
 type FrameData = {
+  lastSeenLookupChar?: string;
+  lastSeenLookupIndex?: number | null;
   left: number;
   right: number;
   previousLeft?: number;
@@ -43,7 +45,7 @@ function createSteps(input: string): AlgorithmStep[] {
   const pushFrame = (data: FrameData, title: string, titleEn: string, narration: string, narrationEn: string, operation: NonNullable<AlgorithmStep['operation']>, anchor: string, notes: string, notesEn: string) => {
     const { left: l, right: r, windowStart, windowEnd, candidate, previous } = data;
     const repeatedInside = candidate !== null && previous !== null && previous >= l;
-    const showMap = data.phase === 'inspect' || data.phase === 'record' || data.phase === 'compare-best';
+    const showMap = data.phase !== 'init' && data.phase !== 'finish';
     const layout = layoutSequence(chars.length, {
       left: l,
       right: r,
@@ -57,7 +59,7 @@ function createSteps(input: string): AlgorithmStep[] {
     const candidateChar = candidate === null ? undefined : chars[candidate];
     const candidateEntry = candidateChar === undefined ? undefined : allMapEntries.find(([char]) => char === candidateChar);
     const recentEntries = allMapEntries.filter(([char]) => char !== candidateChar).slice(-1);
-    const mapEntries = showMap ? [...recentEntries, ...(candidateChar === undefined ? [] : [[candidateChar, candidateEntry?.[1] ?? candidate] as [string, number]])] : [];
+    const mapEntries = showMap ? [...recentEntries, ...(candidateEntry ? [candidateEntry] : [])] : [];
     const tableStart = CANVAS_WIDTH - 285;
     const nodeX = (index: number) => layout.xByIndex.get(index) ?? layout.xByIndex.get(candidate ?? -1) ?? 600;
     const displayBounds = { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
@@ -69,8 +71,10 @@ function createSteps(input: string): AlgorithmStep[] {
       const isFuture = index > r && data.phase !== 'finish';
       const status = isFuture ? 'idle' as const : data.phase === 'finish' && isBest ? 'done' as const
         : data.phase === 'compare-best' && isBest && !isCandidate ? 'visited' as const
-        : data.phase === 'inspect' && (index === previous || isCandidate) ? 'compare' as const
+        : data.phase === 'inspect' && previous === null && isCandidate ? 'current' as const
+        : data.phase === 'inspect' && previous !== null && (index === previous || isCandidate) ? 'compare' as const
         : isCandidate ? (data.phase === 'inspect' ? 'compare' as const : 'current' as const)
+        : data.phase === 'shrink' && index === previous ? 'compare' as const
         : inWindow ? 'visited' as const
         : isBest ? 'done' as const
         : 'idle' as const;
@@ -89,7 +93,7 @@ function createSteps(input: string): AlgorithmStep[] {
       ...(displayIndices.includes(l) ? [{ id: 'left-pointer', from: { x: byIndex(l), y: 390 }, to: { x: byIndex(l), y: 365 }, text: { 'zh-CN': `左 L=${l}`, en: `Left L=${l}` }, kind: 'pointer' as const }] : []),
       ...(r >= 0 && displayIndices.includes(r) ? [{ id: 'right-pointer', from: { x: byIndex(r), y: 465 }, to: { x: byIndex(r), y: 440 }, text: { 'zh-CN': `右 R=${r}`, en: `Right R=${r}` }, kind: 'pointer' as const }] : [])
     ] : [];
-    const flowArrows = !showMap && data.phase === 'shrink' && previous !== null ? [{
+    const flowArrows = data.phase === 'shrink' && previous !== null ? [{
       id: `jump-${steps.length}`, from: { x: byIndex(data.previousLeft ?? l), y: 430 }, to: { x: byIndex(l), y: 430 },
       text: { 'zh-CN': `移动左边界`, en: `Move left` },
       kind: 'transfer' as const, curve: 0, labelOffset: { x: 0, y: 18 }
@@ -98,9 +102,14 @@ function createSteps(input: string): AlgorithmStep[] {
     const mapCell = (column: number) => ({ x: tableStart + (column % 2) * 100, y: mapY + Math.floor(column / 2) * 58 });
     const hashRows = mapEntries.map(([char, index], row) => ({ char, index, id: `last-${char.codePointAt(0) ?? row}`, ...mapCell(row) }));
     const positions = new Map(hashRows.map(row => [row.char, { x: row.x, y: row.y }]));
+    const lookupChar = data.lastSeenLookupChar ?? (data.phase === 'inspect' ? candidateChar : undefined);
+    const lookupIndex = data.lastSeenLookupIndex ?? (data.phase === 'inspect' ? previous : undefined);
+    const lookupHit = data.phase === 'inspect' || data.phase === 'shrink'
+      ? previous !== undefined
+      : lookupChar !== undefined && lookupIndex !== null;
     const allNodes = [
       ...nodes,
-      ...(showMap ? hashRows.map(row => ({ id: row.id, label: `${row.char} → ${row.index}`, x: row.x, y: row.y, radius: 25, badge: undefined, sublabel: undefined, status: 'idle' as const })) : [])
+      ...(showMap ? hashRows.map(row => ({ id: row.id, label: `${row.char} → ${row.index}`, x: row.x, y: row.y, radius: 25, kind: 'highlight' as const, badge: undefined, sublabel: undefined, status: lookupHit && lookupIndex === row.index && lookupChar === row.char ? 'visited' as const : 'idle' as const })) : [])
     ];
     const lookupFrom = candidate === null ? null : { x: byIndex(candidate), y: 300 };
     const lookupTo = candidateChar ? positions.get(candidateChar) ?? null : null;
@@ -110,6 +119,10 @@ function createSteps(input: string): AlgorithmStep[] {
     const frameArrows = [
       ...pointers,
       ...flowArrows,
+      ...(data.phase === 'inspect' && candidate !== null && previous === null ? [{
+        id: `lookup-${steps.length}`, from: { x: byIndex(candidate), y: 300 }, to: { x: byIndex(candidate), y: 300 },
+        text: { 'zh-CN': `${candidateChar} 未命中`, en: `${candidateChar} not found` }, kind: 'flow' as const, curve: 24, labelOffset: { x: 0, y: -42 }
+      }] : []),
       ...(data.phase === 'inspect' && candidate !== null && previous !== null && lookupEdge ? [{
         id: `lookup-${steps.length}`, from: lookupEdge.from, to: lookupEdge.to,
         text: { 'zh-CN': '重复？', en: 'Repeat?' }, kind: 'flow' as const, curve: 0, labelOffset: { x: 12, y: -24 }
@@ -137,7 +150,28 @@ function createSteps(input: string): AlgorithmStep[] {
     const step: AlgorithmStep = {
       id: steps.length, title, titleEn, description: narrationFull, descriptionEn: narrationEn,
       narration: narrationFull, narrationEn, operation,
-      binding: { anchorIds: [anchor], variables: { left: l, right: Math.max(r, 0), window: effectiveWindow, currentLength: data.currentLength, bestLength: data.bestLength, lastSeen: Object.fromEntries([...lastSeen.entries()]) } },
+      binding: {
+        anchorIds: [anchor],
+        variables: {
+          left: l,
+          right: Math.max(r, 0),
+          previousLeft: data.phase === 'shrink' ? data.previousLeft : undefined,
+          lookupChar,
+          lookupIndex,
+          lookupFound: data.lastSeenLookupChar !== undefined
+            ? data.lastSeenLookupIndex !== null
+            : data.phase === 'inspect' || data.phase === 'shrink' ? lookupHit : undefined,
+          lookupCharacter: data.phase === 'inspect' || data.phase === 'shrink' ? candidateChar : undefined,
+          lookupCandidate: data.phase === 'inspect' && !lookupHit ? candidateChar : undefined,
+          lastSeenWrite: data.phase === 'record' ? candidateChar : undefined,
+          lastSeenPrevious: data.phase === 'record' ? previous : undefined,
+          window: effectiveWindow,
+          bestRange: data.bestLength > 0 ? [data.bestStart, data.bestStart + data.bestLength] : null,
+          currentLength: data.currentLength,
+          bestLength: data.bestLength,
+          lastSeen: Object.fromEntries(lastSeen.entries())
+        }
+      },
       frame: {
         layoutBounds: displayBounds,
         windowRange: chars.length > 0 && windowStart >= 0 && windowStart < chars.length && windowStart <= (data.phase === 'include' ? r : windowEnd)
@@ -196,26 +230,32 @@ function createSteps(input: string): AlgorithmStep[] {
         `检查「${char}」：发现重复`, `Check “${char}”: duplicate found`,
         `候选字符 s[${right}]=「${char}」与窗口内旧字符 s[${previous}]=「${char}」相同。当前有效窗口仍是 [${left},${right - 1}]「${chars.slice(left, right).join('')}」；lastSeen 查询命中 ${previous}，因此暂不能把候选字符算入窗口。`,
         `Candidate s[${right}]=“${char}” matches s[${previous}]=“${char}” inside the window. The valid window remains [${left},${right - 1}] “${chars.slice(left, right).join('')}”; lastSeen lookup returns ${previous}, so the candidate is not included yet.`,
-        'compare', 'duplicate', `哈希表中 ${char}→${previous} 指向窗口内旧位置。`, `The map entry ${char}→${previous} points to the earlier in-window occurrence.`));
+        'compare', 'lookup', `哈希表中 ${char}→${previous} 指向窗口内旧位置。`, `The map entry ${char}→${previous} points to the earlier in-window occurrence.`));
       left = Math.max(left, previous + 1);
-      steps.push(pushFrame({ left, right, previousLeft: oldLeft, windowStart: left, windowEnd: right - 1, currentLength: right - left, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: previous ?? null, phase: 'shrink' },
+      steps.push(pushFrame({ left, right, previousLeft: oldLeft, windowStart: left, windowEnd: right - 1, currentLength: right - left, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: previous ?? null, phase: 'shrink', lastSeenLookupChar: char, lastSeenLookupIndex: previous },
         '左边界越过旧字符', 'Move left past the old character',
         `旧 left=${oldLeft}；重复字符旧索引=${previous}，所以 left=max(${oldLeft}, ${previous}+1)=${left}。右指针保持 ${right} 不回退，当前窗口缩为 [${left},${right - 1}]「${chars.slice(left, right).join('')}」，长度 ${right - left}。`,
         `Old left=${oldLeft}; prior duplicate index=${previous}, so left=max(${oldLeft}, ${previous}+1)=${left}. Right stays at ${right}; the valid window shrinks to [${left},${right - 1}] “${chars.slice(left, right).join('')}”, length ${right - left}.`,
         'move', 'shrink', `跳过已证明会造成重复的前缀；left 只前进不后退。`, `Skip the proven conflicting prefix; left only moves forward.`));
     } else if (previous !== undefined) {
-      steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right - 1, currentLength: right - left, bestStart, bestLength, candidate: right, previous, highlightedMapIndex: previous, phase: 'inspect' },
+      steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right - 1, currentLength: right - left, bestStart, bestLength, candidate: right, previous, highlightedMapIndex: previous, lastSeenLookupChar: char, lastSeenLookupIndex: previous, phase: 'inspect' },
         `检查「${char}」：旧位置已在窗口外`, `Check “${char}”: previous index is outside`,
         `lastSeen[${char}]=${previous}，但旧位置 ${previous}<left ${left}，已在有效窗口之外。因此 left 保持 ${left}，无需删除任何窗口字符。`,
         `lastSeen[${char}]=${previous}, but ${previous}<left ${left}, outside the valid window. Keep left at ${left}; no current window character needs removal.`,
-        'compare', 'duplicate', `旧出现位置 ${previous} 已被边界排除，不构成当前重复。`, `The prior occurrence at ${previous} is already excluded by the left boundary.`));
+        'compare', 'lookup', `旧出现位置 ${previous} 已被边界排除，不构成当前重复。`, `The prior occurrence at ${previous} is already excluded by the left boundary.`));
+    } else {
+      steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right - 1, currentLength: right - left, bestStart, bestLength, candidate: right, previous: null, highlightedMapIndex: null, lastSeenLookupChar: char, lastSeenLookupIndex: null, phase: 'inspect' },
+        `查找「${char}」：记录表中没有`, `Lookup “${char}”: no map entry`,
+        `读取 s[${right}] =「${char}」，查询 lastSeen 未命中；记录表中尚无这个字符，因此不会造成窗口冲突。`,
+        `Read s[${right}] = “${char}”; lastSeen has no entry, so it cannot conflict with the current window.`,
+        'compare', 'lookup', `查询 ${char} 未命中，当前映射保持不变。`, `Lookup ${char} misses; the map remains unchanged.`));
     }
     const beforeIncludeLength = right - left;
     steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength: beforeIncludeLength + 1, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: previous ?? null, phase: 'include' },
       `读取 s[${right}] 并加入窗口`, `Read s[${right}] and include it`,
       `读取候选字符「${char}」。从 left=${left} 到 right=${right} 的窗口现在无重复，加入后区间为 [${left},${right}]「${chars.slice(left, right + 1).join('')}」，当前长度 ${right - left + 1}。`,
       `Read candidate “${char}”. The range from left=${left} to right=${right} is now unique; including it forms [${left},${right}] “${chars.slice(left, right + 1).join('')}”, current length ${right - left + 1}.`,
-      'read', 'read', `字符进入窗口，接下来更新 lastSeen[${char}]。`, `The character enters the window; next update lastSeen[${char}].`));
+      'read', 'read', `字符进入窗口，并准备写入 lastSeen[${char}]=${right}。`, `The character enters the window; prepare to write lastSeen[${char}]=${right}.`));
     lastSeen.set(char, right);
     const currentLength = right - left + 1;
     steps.push(pushFrame({ left, right, windowStart: left, windowEnd: right, currentLength, bestStart, bestLength, candidate: right, previous: previous ?? null, highlightedMapIndex: right, phase: 'record' },

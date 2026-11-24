@@ -8,11 +8,17 @@ const java = `class Solution {
         // anchor:loop
         for (int right = 0; right < s.length(); right++) {
             char ch = s.charAt(right);
+            // anchor:read
+            // anchor:lookup
             // anchor:duplicate
             if (lastSeen.containsKey(ch) && lastSeen.get(ch) >= left) {
+                // anchor:shrink
                 left = lastSeen.get(ch) + 1;
             }
+            // anchor:write
             lastSeen.put(ch, right);
+            // anchor:store
+            // anchor:compare-best
             // anchor:update-best
             best = Math.max(best, right - left + 1);
         }
@@ -26,10 +32,16 @@ const python = `class Solution:
         last_seen, left, best = {}, 0, 0
         # anchor:loop
         for right, ch in enumerate(s):
-            # anchor:duplicate
+            # anchor:read
+            # anchor:lookup
             if ch in last_seen and last_seen[ch] >= left:
+                # anchor:duplicate
+                # anchor:shrink
                 left = last_seen[ch] + 1
+            # anchor:write
             last_seen[ch] = right
+            # anchor:store
+            # anchor:compare-best
             # anchor:update-best
             best = max(best, right - left + 1)
         # anchor:return
@@ -40,11 +52,17 @@ const go = `func lengthOfLongestSubstring(s string) int {
     left, best := 0, 0
     // anchor:loop
     for right, ch := range []rune(s) {
-        // anchor:duplicate
+        // anchor:read
+        // anchor:lookup
         if previous, ok := lastSeen[ch]; ok && previous >= left {
+            // anchor:duplicate
+            // anchor:shrink
             left = previous + 1
         }
+        // anchor:write
         lastSeen[ch] = right
+        // anchor:store
+        // anchor:compare-best
         // anchor:update-best
         if length := right - left + 1; length > best { best = length }
     }
@@ -58,9 +76,16 @@ const javascript = `function lengthOfLongestSubstring(s) {
   // anchor:loop
   for (let right = 0; right < s.length; right++) {
     const ch = s[right];
+    // anchor:read
+    // anchor:lookup
     // anchor:duplicate
-    if (lastSeen.has(ch) && lastSeen.get(ch) >= left) left = lastSeen.get(ch) + 1;
+    if (lastSeen.has(ch) && lastSeen.get(ch) >= left) {
+      // anchor:shrink
+      left = lastSeen.get(ch) + 1;
+    }
+    // anchor:store
     lastSeen.set(ch, right);
+    // anchor:compare-best
     // anchor:update-best
     best = Math.max(best, right - left + 1);
   }

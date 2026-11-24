@@ -150,15 +150,23 @@ test.describe('Algorithm Visualization Acceptance', () => {
     await page.getByTestId('next-step-btn').click();
     await input.evaluate((element: HTMLInputElement) => element.blur());
     await expect(page.getByTestId('canvas-input-echo')).toContainText('abcabcbb');
+    await expect(page.getByTestId('lookup-miss')).toContainText(/not in lastSeen yet|尚未写入 lastSeen/);
+    await expect(page.getByTestId('last-seen-entry-a')).toHaveAttribute('data-change', 'miss');
     const narration = page.getByTestId('step-narration');
     const before = await narration.innerText();
-    for (let index = 0; index < 30; index += 1) {
-      if ((await narration.innerText()).includes('lastSeen lookup returns 0')) break;
+    const locale = await page.locator('[data-testid="app-root"]').getAttribute('lang');
+    const duplicateNarration = locale === 'en'
+      ? /Candidate s\[3\].*lastSeen lookup returns 0/
+      : /候选字符 s\[3\].*lastSeen 查询命中 0/;
+    for (let index = 0; index < 50; index += 1) {
+      if (duplicateNarration.test(await narration.innerText())) break;
       await page.getByTestId('next-step-btn').click();
     }
     await expect(narration).not.toHaveText(before);
-    await expect(narration).toContainText('lastSeen lookup returns 0');
+    await expect.poll(() => narration.innerText()).toMatch(duplicateNarration);
+    await expect(page.getByTestId('lookup-result')).toContainText(locale === 'en' ? 'found at 0' : '命中索引 0');
     await expect(page.locator('[data-node-id="last-97"]')).toHaveCount(1);
+    await expect(page.getByTestId('last-seen-entry-a')).toHaveAttribute('data-lookup', 'true');
     await expect(page.locator('[data-node-id="char-3"][data-status="compare"]')).toBeVisible();
     await expect(page.locator('[data-node-id="char-0"][data-status="compare"]')).toBeVisible();
     await expect(page.locator('.layer-decorations [data-node-id="pointer-left"]')).toBeVisible();

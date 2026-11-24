@@ -41,6 +41,45 @@ describe('createSolutionRegistry', () => {
     }
   });
 
+  it('keeps map snapshots immutable and distinguishes lookup from the subsequent write', () => {
+    const solution = createSolutionRegistry('abcaa')[0];
+    const initialWrite = solution.steps.find((step) => step.operation === 'insert' && step.binding.variables.right === 0)!;
+    const readB = solution.steps.find((step) => step.title.includes('查找「b」'))!;
+    const writeB = solution.steps.find((step) => step.operation === 'insert' && step.binding.variables.right === 1)!;
+    const queryA = solution.steps.find((step) => step.operation === 'compare' && step.binding.variables.right === 3)!;
+    const shrinkA = solution.steps.find((step) => step.operation === 'move' && step.binding.variables.right === 3)!;
+    const overwriteA = solution.steps.find((step) => step.operation === 'insert' && step.binding.variables.right === 3)!;
+
+    expect(initialWrite.binding.variables.lastSeen).toEqual({ a: 0 });
+    expect(readB.binding.variables.lastSeen).toEqual({ a: 0 });
+    expect(readB.frame.nodes.some((node) => node.id === 'last-97' && node.label === 'a → 0')).toBe(true);
+    expect(readB.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('b 未命中'))).toBe(true);
+    expect(readB.binding.variables.lookupChar).toBe('b');
+    expect(readB.binding.variables.lookupIndex).toBeNull();
+    expect(readB.binding.variables.lookupFound).toBe(false);
+    expect(readB.binding.variables.lastSeenWrite).toBeUndefined();
+    expect(writeB.binding.variables.lastSeen).toEqual({ a: 0, b: 1 });
+    expect(solution.steps[0].binding.variables.lastSeen).toEqual({});
+    expect(queryA.binding.variables).toMatchObject({ lookupChar: 'a', lookupIndex: 0, lookupFound: true, left: 0 });
+    expect(queryA.binding.variables.lastSeen).toEqual({ a: 0, b: 1, c: 2 });
+    expect(shrinkA.binding.variables).toMatchObject({ lookupChar: 'a', lookupIndex: 0, lookupFound: true, previousLeft: 0, left: 1 });
+    expect(overwriteA.binding.variables).toMatchObject({ lastSeenWrite: 'a', lastSeenPrevious: 0 });
+    expect(overwriteA.binding.variables.lastSeen).toEqual({ a: 3, b: 1, c: 2 });
+  });
+
+  it('resolves every semantic step anchor to valid lines in all supported languages', () => {
+    const solution = createSolutionRegistry('abcabcbb')[0];
+    for (const step of solution.steps) {
+      for (const language of ['java', 'python', 'go', 'javascript'] as const) {
+        const code = solution.codes[language];
+        const highlighted = step.binding.anchorIds.flatMap((anchor) => code.anchorLineMap[anchor] ?? []);
+        expect(highlighted.length, `${language} ${step.title}`).toBeGreaterThan(0);
+        for (const line of highlighted) expect(line).toBeGreaterThanOrEqual(1);
+        for (const line of highlighted) expect(line).toBeLessThanOrEqual(code.code.split('\n').length);
+      }
+    }
+  });
+
   it('marks the active window and connects an in-window duplicate to its earlier occurrence', () => {
     const solution = createSolutionRegistry('abcabcbb')[0];
     const include = solution.steps.find((step) => step.operation === 'read' && step.binding.variables.right === 2)!;
@@ -74,6 +113,7 @@ describe('createSolutionRegistry', () => {
     expect(duplicate.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Repeat?'))).toBe(true);
     const shrink = solution.steps.find((step) => step.operation === 'move' && step.binding.variables.right === 3)!;
     expect(shrink.narration).toContain('left=max(0, 0+1)=1');
+    expect(shrink.binding.variables).toMatchObject({ lookupChar: 'a', lookupIndex: 0, lookupFound: true, previousLeft: 0, left: 1 });
     expect(shrink.frame.arrows.some((arrow) => JSON.stringify(arrow.text).includes('Move left'))).toBe(true);
     const final = solution.steps.at(-1)!;
     expect(final.narration).toContain('[0,3)');
